@@ -2,4 +2,4 @@
 name = "CustomCameraGUI"
 
 [tool.pyside6-project]
-files = ["Camera_GUI/Main.qml", "Camera_GUI/qmldir", "main.py"]
+files = ["Camera_GUI/Main.qml", "Camera_GUI/qmldir", "camera_dock.py", "control_dock.py", "main.py", "telemetry_dock.py", "video_widget.py"]
