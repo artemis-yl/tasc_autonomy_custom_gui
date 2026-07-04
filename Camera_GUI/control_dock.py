@@ -11,7 +11,7 @@ class CameraControlDock(QDockWidget):
     Add as many settings as you want, the scroll area handles overflow.
     """
 
-    settings_applied = Signal(str, dict)  # camera_name, settings_dict
+    settings_applied = Signal(str, dict)  
 
     def __init__(self, parent=None):
         super().__init__("Camera Controls", parent)

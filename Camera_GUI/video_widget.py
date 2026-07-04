@@ -1,179 +1,92 @@
-from PySide6.QtWidgets import QWidget, QVBoxLayout, QLabel
-from PySide6.QtCore import Qt
-from PySide6.QtGui import QImage, QPixmap
-from PySide6.QtMultimediaWidgets import QVideoWidget
+import gi
+gi.require_version("Gst", "1.0")
+from gi.repository import Gst
 
-# Optional: GStreamer via gi (fallback if Qt Multimedia isn't enough)
-try:
-    import gi
-    gi.require_version('Gst', '1.0')
-    from gi.repository import Gst, GLib
-    GSTREAMER_AVAILABLE = True
-except ImportError:
-    GSTREAMER_AVAILABLE = False
+import numpy as np
+
+from PySide6.QtWidgets import QWidget, QLabel, QVBoxLayout
+from PySide6.QtGui import QImage, QPixmap
+from PySide6.QtCore import QTimer
+
+Gst.init(None)
 
 
 class GStreamerVideoWidget(QWidget):
-    """
-    Renders GStreamer video pipeline into a Qt widget.
-    Uses Qt6's QVideoWidget with a custom media source,
-    or falls back to appsink + QImage if needed.
-    """
-
-    def __init__(self, pipeline_str=None, parent=None):
+    def __init__(self, parent=None):
         super().__init__(parent)
 
-        self.pipeline_str = pipeline_str
-        self._setup_ui()
+        self.label = QLabel("No Signal")
+        self.label.setStyleSheet("background:black;")
 
-        # Try Qt Multimedia first (easier, hardware accelerated)
-        self._try_qt_multimedia()
-
-        # Fallback to GStreamer direct if specified and available
-        if pipeline_str and GSTREAMER_AVAILABLE and not self.has_video:
-            self._setup_gstreamer_direct()
-
-    def _setup_ui(self):
         layout = QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
-        layout.setSpacing(0)
+        layout.addWidget(self.label)
 
-        self.placeholder = QLabel("No Signal")
-        self.placeholder.setAlignment(Qt.AlignCenter)
-        self.placeholder.setStyleSheet("""
-            QLabel {
-                background-color: #1a1a1a;
-                color: #555555;
-                font-size: 16px;
-            }
-        """)
-        layout.addWidget(self.placeholder)
+        self.pipeline = None
+        self.appsink = None
 
-        self.video_widget = None
-        self.has_video = False
+        self.timer = QTimer()
+        self.timer.timeout.connect(self._pull_frame)
 
-    def _try_qt_multimedia(self):
-        """Use Qt6 Multimedia (QCamera, QMediaPlayer) for standard sources."""
-        try:
-            from PySide6.QtMultimedia import QMediaPlayer
+    # ---------------- START ----------------
+    def start(self, device_index: int):
+        print(f"[GST] Starting appsink camera {device_index}")
 
-            self.player = QMediaPlayer(self)
-            self.video_widget = QVideoWidget()
+        pipeline_str = (
+            f"mfvideosrc device-index={device_index} ! "
+            "videoconvert ! "
+            "video/x-raw,format=BGR ! "
+            "appsink name=sink emit-signals=false max-buffers=1 drop=true"
+        )
 
-            self.player.setVideoOutput(self.video_widget)
+        print("[GST PIPELINE]")
+        print(pipeline_str)
 
-            self.placeholder.hide()
-            self.layout().addWidget(self.video_widget)
-            self.has_video = True
+        self.pipeline = Gst.parse_launch(pipeline_str)
+        self.appsink = self.pipeline.get_by_name("sink")
 
-        except Exception as e:
-            print(f"Qt Multimedia init failed: {e}")
-
-    def _setup_gstreamer_direct(self):
-        """Direct GStreamer pipeline with appsink → QImage."""
-        if not GSTREAMER_AVAILABLE:
+        if not self.appsink:
+            print("[GST ERROR] appsink not found")
             return
 
-        Gst.init(None)
+        ret = self.pipeline.set_state(Gst.State.PLAYING)
+        print(f"[GST STATE] PLAYING = {ret}")
 
-        if self.pipeline_str is None:
-            self.pipeline_str = (
-                "v4l2src ! videoconvert ! videoscale ! "
-                "video/x-raw,format=RGB,width=640,height=480 ! "
-                "appsink name=sink"
-            )
+        self.timer.start(30)
 
-        self.pipeline = Gst.parse_launch(self.pipeline_str)
-        self.appsink = self.pipeline.get_by_name("sink")
-        self.appsink.set_property("emit-signals", True)
-        self.appsink.set_property("max-buffers", 1)
-        self.appsink.set_property("drop", True)
-        self.appsink.connect("new-sample", self._on_new_sample)
+    # ---------------- FRAME GRAB ----------------
+    def _pull_frame(self):
+        if not self.appsink:
+            return
 
-        self.pipeline.set_state(Gst.State.PLAYING)
+        sample = self.appsink.emit("try-pull-sample", 0)
+        if not sample:
+            return
 
-        self.video_label = QLabel()
-        self.video_label.setAlignment(Qt.AlignCenter)
-        self.video_label.setStyleSheet("background-color: #1a1a1a;")
-        self.placeholder.hide()
-        self.layout().addWidget(self.video_label)
-        self.has_video = True
-
-    def _on_new_sample(self, sink):
-        """Callback for GStreamer appsink new frame."""
-        sample = sink.pull_sample()
-        if sample is None:
-            return Gst.FlowReturn.OK
-
-        buffer = sample.get_buffer()
+        buf = sample.get_buffer()
         caps = sample.get_caps()
-        structure = caps.get_structure(0)
-        width = structure.get_value("width")
-        height = structure.get_value("height")
 
-        success, mapinfo = buffer.map(Gst.MapFlags.READ)
-        if success:
-            image = QImage(
-                mapinfo.data,
-                width,
-                height,
-                QImage.Format_RGB888
-            )
-            pixmap = QPixmap.fromImage(image.copy())
-            self.video_label.setPixmap(pixmap.scaled(
-                self.video_label.size(),
-                Qt.KeepAspectRatio,
-                Qt.SmoothTransformation
-            ))
-            buffer.unmap(mapinfo)
+        ok, map_info = buf.map(Gst.MapFlags.READ)
+        if not ok:
+            return
 
-        return Gst.FlowReturn.OK
+        try:
+            arr = np.frombuffer(map_info.data, dtype=np.uint8)
 
-    def set_rtsp_url(self, url):
-        """Configure for RTSP IP camera."""
-        if hasattr(self, 'player'):
-            from PySide6.QtCore import QUrl
-            self.player.setSource(QUrl(url))
-            self.player.play()
+            s = caps.get_structure(0)
+            w = s.get_value("width")
+            h = s.get_value("height")
 
-    def set_v4l2_device(self, device="/dev/video0"):
-        """Configure for USB V4L2 camera."""
-        if hasattr(self, 'player'):
-            pipeline = (
-                f"v4l2src device={device} ! videoconvert ! "
-                "video/x-raw,format=RGB,width=640,height=480 ! appsink name=sink"
-            )
-            self.pipeline_str = pipeline
-            self._setup_gstreamer_direct()
+            frame = arr.reshape((h, w, 3))
 
-    def set_test_source(self):
-        """GStreamer test source for debugging."""
-        self.pipeline_str = (
-            "videotestsrc ! videoconvert ! "
-            "video/x-raw,format=RGB,width=640,height=480 ! appsink name=sink"
-        )
-        self._setup_gstreamer_direct()
+            img = QImage(frame.data, w, h, 3 * w, QImage.Format_BGR888)
+            self.label.setPixmap(QPixmap.fromImage(img))
 
-    def play(self):
-        """Start playback."""
-        if hasattr(self, 'player'):
-            self.player.play()
-        elif hasattr(self, 'pipeline'):
-            self.pipeline.set_state(Gst.State.PLAYING)
+        finally:
+            buf.unmap(map_info)
 
+    # ---------------- STOP ----------------
     def stop(self):
-        """Stop playback."""
-        if hasattr(self, 'player'):
-            self.player.stop()
-        elif hasattr(self, 'pipeline'):
+        if self.pipeline:
             self.pipeline.set_state(Gst.State.NULL)
-
-    def resizeEvent(self, event):
-        """Scale video on resize."""
-        super().resizeEvent(event)
-        if hasattr(self, 'video_label') and self.video_label.pixmap():
-            self.video_label.setPixmap(self.video_label.pixmap().scaled(
-                self.video_label.size(),
-                Qt.KeepAspectRatio,
-                Qt.SmoothTransformation
-            ))
+            self.pipeline = None
