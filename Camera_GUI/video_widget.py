@@ -173,14 +173,18 @@ class GStreamerVideoWidget(QWidget):
 
         if source_mode == "srt" and stream_uri:
             return (
-                f'uridecodebin uri="{stream_uri}" name=src ! '
-                "queue max-size-buffers=2 leaky=downstream ! "
-                f"videoflip method={flip_method} ! "
-                f"videobalance brightness={brightness:.3f} ! "
-                "videoscale ! "
-                f"video/x-raw,width={width},height={height} ! "
+               # f'uridecodebin uri="{stream_uri}" name=src ! '
+               #  "queue max-size-buffers=2 leaky=downstream ! "
+               # f"videoflip method={flip_method} ! "
+               # f"videobalance brightness={brightness:.3f} ! "
+               # "videoscale ! "
+               # f"video/x-raw,width={width},height={height} ! "
+               #"video/x-raw,format=BGR ! "
+                #"appsink name=sink emit-signals=false max-buffers=1 drop=true sync=false"
+
+                f'srtsrc uri="{stream_uri}?mode=listener" ! '
+                'h264parse ! avdec_h264 ! '
                 "videoconvert ! "
-                "video/x-raw,format=BGR ! "
                 "appsink name=sink emit-signals=false max-buffers=1 drop=true sync=false"
             )
 

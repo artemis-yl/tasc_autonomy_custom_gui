@@ -73,7 +73,7 @@ class CameraControlDock(QDockWidget):
             "Orbbec / Front",
             "WebCam / Back",
             "IP Cam / Top",
-            "IR Cam / ARM",
+            "IP Cam 2 / ARM",
         ])
         layout.addWidget(self.camera_selector)
 
@@ -85,13 +85,13 @@ class CameraControlDock(QDockWidget):
         # Resolution
         layout.addWidget(QLabel("Resolution"))
         self.res_combo = QComboBox()
-        self.res_combo.addItems(["640x480", "1280x720", "1920x1080"])
+        self.res_combo.addItems(["640x360", "1280x720"])
         layout.addWidget(self.res_combo)
 
         # Frame Rate
         layout.addWidget(QLabel("Frame Rate"))
         self.fps_combo = QComboBox()
-        self.fps_combo.addItems(["15 fps", "30 fps", "60 fps"])
+        self.fps_combo.addItems(["15 fps", "25 fps", "30 fps"])
         layout.addWidget(self.fps_combo)
 
         # Brightness
@@ -110,10 +110,10 @@ class CameraControlDock(QDockWidget):
         self.bitrate_combo = QComboBox()
         self.bitrate_combo.addItems([
             "250 kbps", "500 kbps", "1000 kbps", "1500 kbps", "2000 kbps",
-            "3000 kbps", "4000 kbps", "6000 kbps", "8000 kbps", "12000 kbps",
-            "16000 kbps", "24000 kbps", "32000 kbps", "50000 kbps", "Uncapped"
+            #"3000 kbps", "4000 kbps", "6000 kbps", "8000 kbps", "12000 kbps", # naw
+            #"16000 kbps", "24000 kbps", "32000 kbps", "50000 kbps", "Uncapped" # heeell naw
         ])
-        self.bitrate_combo.setCurrentText("4000 kbps")
+        self.bitrate_combo.setCurrentText("500 kbps")
         layout.addWidget(self.bitrate_combo)
 
         # Flip / Mirror
