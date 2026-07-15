@@ -7,11 +7,11 @@ from PySide6.QtCore import Qt, Signal
 
 class CameraControlDock(QDockWidget):
     """
-    Scrollable camera controls with Apply button at the bottom.
-    Add as many settings as you want, the scroll area handles overflow.
+    Compact camera controls with only the requested settings.
     """
 
-    settings_applied = Signal(str, dict)  
+    settings_applied = Signal(str, dict)
+    restart_requested = Signal()
 
     def __init__(self, parent=None):
         super().__init__("Camera Controls", parent)
@@ -71,9 +71,9 @@ class CameraControlDock(QDockWidget):
         self.camera_selector = QComboBox()
         self.camera_selector.addItems([
             "Orbbec / Front",
-            "IR Cam / ARM",
             "WebCam / Back",
-            "IP Cam / Top"
+            "IP Cam / Top",
+            "IP Cam 2 / ARM",
         ])
         layout.addWidget(self.camera_selector)
 
@@ -82,44 +82,16 @@ class CameraControlDock(QDockWidget):
         line.setStyleSheet("color: #444444;")
         layout.addWidget(line)
 
-        # Exposure
-        layout.addWidget(QLabel("Exposure"))
-        self.exposure_value = QLabel("50%")
-        self.exposure_value.setStyleSheet("color: #888888; font-size: 11px;")
-        layout.addWidget(self.exposure_value)
-
-        self.exposure_slider = QSlider(Qt.Horizontal)
-        self.exposure_slider.setRange(0, 100)
-        self.exposure_slider.setValue(50)
-        layout.addWidget(self.exposure_slider)
-
-        # Gain
-        layout.addWidget(QLabel("Gain"))
-        self.gain_value = QLabel("50%")
-        self.gain_value.setStyleSheet("color: #888888; font-size: 11px;")
-        layout.addWidget(self.gain_value)
-
-        self.gain_slider = QSlider(Qt.Horizontal)
-        self.gain_slider.setRange(0, 100)
-        self.gain_slider.setValue(50)
-        layout.addWidget(self.gain_slider)
-
-        # White Balance
-        layout.addWidget(QLabel("White Balance"))
-        self.wb_combo = QComboBox()
-        self.wb_combo.addItems(["Auto", "Daylight", "Cloudy", "Tungsten", "Fluorescent", "Custom"])
-        layout.addWidget(self.wb_combo)
-
         # Resolution
         layout.addWidget(QLabel("Resolution"))
         self.res_combo = QComboBox()
-        self.res_combo.addItems(["640x480", "1280x720", "1920x1080", "2560x1440"])
+        self.res_combo.addItems(["640x360", "1280x720"])
         layout.addWidget(self.res_combo)
 
         # Frame Rate
         layout.addWidget(QLabel("Frame Rate"))
         self.fps_combo = QComboBox()
-        self.fps_combo.addItems(["15 fps", "30 fps", "60 fps"])
+        self.fps_combo.addItems(["15 fps", "25 fps", "30 fps"])
         layout.addWidget(self.fps_combo)
 
         # Brightness
@@ -133,49 +105,16 @@ class CameraControlDock(QDockWidget):
         self.brightness_slider.setValue(50)
         layout.addWidget(self.brightness_slider)
 
-        # Contrast
-        layout.addWidget(QLabel("Contrast"))
-        self.contrast_value = QLabel("50%")
-        self.contrast_value.setStyleSheet("color: #888888; font-size: 11px;")
-        layout.addWidget(self.contrast_value)
-
-        self.contrast_slider = QSlider(Qt.Horizontal)
-        self.contrast_slider.setRange(0, 100)
-        self.contrast_slider.setValue(50)
-        layout.addWidget(self.contrast_slider)
-
-        # Saturation
-        layout.addWidget(QLabel("Saturation"))
-        self.sat_value = QLabel("50%")
-        self.sat_value.setStyleSheet("color: #888888; font-size: 11px;")
-        layout.addWidget(self.sat_value)
-
-        self.sat_slider = QSlider(Qt.Horizontal)
-        self.sat_slider.setRange(0, 100)
-        self.sat_slider.setValue(50)
-        layout.addWidget(self.sat_slider)
-
-        # Sharpness
-        layout.addWidget(QLabel("Sharpness"))
-        self.sharp_value = QLabel("50%")
-        self.sharp_value.setStyleSheet("color: #888888; font-size: 11px;")
-        layout.addWidget(self.sharp_value)
-
-        self.sharp_slider = QSlider(Qt.Horizontal)
-        self.sharp_slider.setRange(0, 100)
-        self.sharp_slider.setValue(50)
-        layout.addWidget(self.sharp_slider)
-
-        # Zoom
-        layout.addWidget(QLabel("Digital Zoom"))
-        self.zoom_value = QLabel("1.0x")
-        self.zoom_value.setStyleSheet("color: #888888; font-size: 11px;")
-        layout.addWidget(self.zoom_value)
-
-        self.zoom_slider = QSlider(Qt.Horizontal)
-        self.zoom_slider.setRange(10, 40)
-        self.zoom_slider.setValue(10)
-        layout.addWidget(self.zoom_slider)
+        # Bit Rate
+        layout.addWidget(QLabel("Bit Rate"))
+        self.bitrate_combo = QComboBox()
+        self.bitrate_combo.addItems([
+            "250 kbps", "500 kbps", "1000 kbps", "1500 kbps", "2000 kbps",
+            #"3000 kbps", "4000 kbps", "6000 kbps", "8000 kbps", "12000 kbps", # naw
+            #"16000 kbps", "24000 kbps", "32000 kbps", "50000 kbps", "Uncapped" # heeell naw
+        ])
+        self.bitrate_combo.setCurrentText("500 kbps")
+        layout.addWidget(self.bitrate_combo)
 
         # Flip / Mirror
         flip_layout = QHBoxLayout()
@@ -220,49 +159,45 @@ class CameraControlDock(QDockWidget):
         """)
         layout.addWidget(self.apply_btn)
 
+        # Restart Cameras Button
+        self.restart_btn = QPushButton("Restart Cameras")
+        self.restart_btn.setMinimumHeight(36)
+        self.restart_btn.setStyleSheet("""
+            QPushButton {
+                background-color: #2d89ef;
+                color: white;
+                border: none;
+                padding: 8px;
+                font-weight: bold;
+                font-size: 13px;
+                border-radius: 6px;
+            }
+            QPushButton:hover { background-color: #1f6fd1; }
+            QPushButton:pressed { background-color: #185aab; }
+            QPushButton:disabled { background-color: #444444; color: #888888; }
+        """)
+        layout.addWidget(self.restart_btn)
+
         layout.addStretch()
 
         scroll.setWidget(content)
         self.setWidget(scroll)
 
         # Signals
-        self.exposure_slider.valueChanged.connect(
-            lambda v: self.exposure_value.setText(f"{v}%")
-        )
-        self.gain_slider.valueChanged.connect(
-            lambda v: self.gain_value.setText(f"{v}%")
-        )
         self.brightness_slider.valueChanged.connect(
             lambda v: self.brightness_value.setText(f"{v}%")
         )
-        self.contrast_slider.valueChanged.connect(
-            lambda v: self.contrast_value.setText(f"{v}%")
-        )
-        self.sat_slider.valueChanged.connect(
-            lambda v: self.sat_value.setText(f"{v}%")
-        )
-        self.sharp_slider.valueChanged.connect(
-            lambda v: self.sharp_value.setText(f"{v}%")
-        )
-        self.zoom_slider.valueChanged.connect(
-            lambda v: self.zoom_value.setText(f"{v/10:.1f}x")
-        )
 
         self.apply_btn.clicked.connect(self._on_apply)
+        self.restart_btn.clicked.connect(self.restart_requested.emit)
 
     def _on_apply(self):
         """Gather all settings and emit signal."""
         settings = {
-            'exposure': self.exposure_slider.value(),
-            'gain': self.gain_slider.value(),
-            'white_balance': self.wb_combo.currentText(),
             'resolution': self.res_combo.currentText(),
             'fps': self.fps_combo.currentText(),
             'brightness': self.brightness_slider.value(),
-            'contrast': self.contrast_slider.value(),
-            'saturation': self.sat_slider.value(),
-            'sharpness': self.sharp_slider.value(),
-            'zoom': self.zoom_slider.value() / 10.0,
+            'bitrate': self.bitrate_combo.currentText(),
             'flip_h': self.flip_h.isChecked(),
             'flip_v': self.flip_v.isChecked(),
         }
