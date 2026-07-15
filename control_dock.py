@@ -10,8 +10,8 @@ class CameraControlDock(QDockWidget):
     Compact camera controls with only the requested settings.
     """
 
-    settings_applied = Signal(str, dict)
-    restart_requested = Signal()
+    settings_applied = Signal(dict)
+    stop_requested = Signal(dict)
 
     def __init__(self, parent=None):
         super().__init__("Camera Controls", parent)
@@ -71,7 +71,7 @@ class CameraControlDock(QDockWidget):
         self.camera_selector = QComboBox()
         self.camera_selector.addItems([
             "Orbbec / Front",
-            "WebCam / Back",
+            "Webcam / Back",
             "IP Cam / Top",
             "IP Cam 2 / ARM",
         ])
@@ -85,13 +85,13 @@ class CameraControlDock(QDockWidget):
         # Resolution
         layout.addWidget(QLabel("Resolution"))
         self.res_combo = QComboBox()
-        self.res_combo.addItems(["640x360", "1280x720"])
+        self.res_combo.addItems(["640 x 360", "640 x 480", "1280 x 720"])
         layout.addWidget(self.res_combo)
 
         # Frame Rate
-        layout.addWidget(QLabel("Frame Rate"))
+        layout.addWidget(QLabel("Frame Rate (FPS)"))
         self.fps_combo = QComboBox()
-        self.fps_combo.addItems(["15 fps", "25 fps", "30 fps"])
+        self.fps_combo.addItems(["10", "25", "30"])
         layout.addWidget(self.fps_combo)
 
         # Brightness
@@ -106,12 +106,10 @@ class CameraControlDock(QDockWidget):
         layout.addWidget(self.brightness_slider)
 
         # Bit Rate
-        layout.addWidget(QLabel("Bit Rate"))
+        layout.addWidget(QLabel("Bit Rate (kbps"))
         self.bitrate_combo = QComboBox()
         self.bitrate_combo.addItems([
-            "250 kbps", "500 kbps", "1000 kbps", "1500 kbps", "2000 kbps",
-            #"3000 kbps", "4000 kbps", "6000 kbps", "8000 kbps", "12000 kbps", # naw
-            #"16000 kbps", "24000 kbps", "32000 kbps", "50000 kbps", "Uncapped" # heeell naw
+            "250", "500", "1000", #"1500", "2000",
         ])
         self.bitrate_combo.setCurrentText("500 kbps")
         layout.addWidget(self.bitrate_combo)
@@ -141,7 +139,7 @@ class CameraControlDock(QDockWidget):
         layout.addSpacing(20)
 
         # Apply Button
-        self.apply_btn = QPushButton("Apply Settings")
+        self.apply_btn = QPushButton("Apply Settings / Play Stream")
         self.apply_btn.setMinimumHeight(44)
         self.apply_btn.setStyleSheet("""
             QPushButton {
@@ -159,10 +157,10 @@ class CameraControlDock(QDockWidget):
         """)
         layout.addWidget(self.apply_btn)
 
-        # Restart Cameras Button
-        self.restart_btn = QPushButton("Restart Cameras")
-        self.restart_btn.setMinimumHeight(36)
-        self.restart_btn.setStyleSheet("""
+        # Stop Cameras Button
+        self.stop_btn = QPushButton("Stop Camera Stream")
+        self.stop_btn.setMinimumHeight(36)
+        self.stop_btn.setStyleSheet("""
             QPushButton {
                 background-color: #2d89ef;
                 color: white;
@@ -176,7 +174,7 @@ class CameraControlDock(QDockWidget):
             QPushButton:pressed { background-color: #185aab; }
             QPushButton:disabled { background-color: #444444; color: #888888; }
         """)
-        layout.addWidget(self.restart_btn)
+        layout.addWidget(self.stop_btn)
 
         layout.addStretch()
 
@@ -189,18 +187,49 @@ class CameraControlDock(QDockWidget):
         )
 
         self.apply_btn.clicked.connect(self._on_apply)
-        self.restart_btn.clicked.connect(self.restart_requested.emit)
-
+        self.stop_btn.clicked.connect(self.stop_requested)
+        
+        
+    # Both buttons end up sending a JSON message, it is just that their command differs
     def _on_apply(self):
         """Gather all settings and emit signal."""
-        settings = {
-            'resolution': self.res_combo.currentText(),
-            'fps': self.fps_combo.currentText(),
-            'brightness': self.brightness_slider.value(),
-            'bitrate': self.bitrate_combo.currentText(),
-            'flip_h': self.flip_h.isChecked(),
-            'flip_v': self.flip_v.isChecked(),
+        self.send_message('play')
+        
+        # do we need to emit???
+        #self._on_apply.emit(camera, settings)
+        
+    def stop_requested(self):
+        self.send_message('stop')
+        
+        # do we need to emit???
+        #self.stop_requested.emit(camera, settings)
+        
+    def send_message(self, command):
+        # convert camera_select names to static names, as needed
+        camera_name_convert = {
+            "Orbbec / Front" : "orbbec_color_cam",
+            "Webcam / Back" : "back_web_cam",
+            "IP Cam / Top" : "top",
+            "IP Cam 2 / ARM" : "arm"
         }
-        camera = self.camera_selector.currentText()
-        print(f"[Apply] {camera} → {settings}")
-        self.settings_applied.emit(camera, settings)
+            
+        # extract width and height from resolution -ex) 1280 x 720
+        resolution_split = self.res_combo.currentText().split()
+        width = int(resolution_split[0])
+        height = int(resolution_split[2])
+
+        # even if command = 'stop' doesn't need the rest, it's fine to have
+        settings = {
+            'state': command,
+            'camera': camera_name_convert.get( self.camera_selector.currentText() ),
+            'width': width,
+            'height': height,
+            'fps': int(self.fps_combo.currentText()),
+            'bitrate': int(self.bitrate_combo.currentText()),
+        #    'brightness': self.brightness_slider.value(),
+        #    'flip_h': self.flip_h.isChecked(),
+        #    'flip_v': self.flip_v.isChecked(),
+        }
+        print(f"[{command}] {settings['camera']} → {settings}")
+
+        

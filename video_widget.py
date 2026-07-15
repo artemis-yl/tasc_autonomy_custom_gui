@@ -21,12 +21,12 @@ class GStreamerVideoWidget(QWidget):
         self.timer = QTimer()
         self.timer.timeout.connect(self._pull_frame)
 
-    def start(self, port: int):
+    def start(self, ip, port: int):
         print(f"[GST] Listening for SRT stream on port: {port}")
 
         # use ports to change pipeline based on ip vs usb
         pipeline_str = (
-            f'srtsrc uri="srt://:{port}?mode=listener keep-listening=true" ! '
+            f'srtsrc uri="srt://{ip}:{port}?mode=listener keep-listening=true" ! '
             "h264parse ! "
             "avdec_h264 ! "
             "videoconvert ! "
