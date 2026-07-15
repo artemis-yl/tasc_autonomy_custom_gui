@@ -2,6 +2,10 @@
 
 PySide6 dockable camera GUI for robot autonomy. Four independent camera feeds in floating/tabbed docks, a scrollable control panel, and telemetry readouts.
 
+## Set up Pyside6 and PGobject in Windows
+https://docs.google.com/document/d/1uKSwuobtI_gU1plCXWybySQjaeOVPDeHOYEN8cozPjo/edit?usp=sharing
+
+
 ## What's Working
 
 - **Dock system** - drag, float, tab, hide/show, reset layout via View menu
