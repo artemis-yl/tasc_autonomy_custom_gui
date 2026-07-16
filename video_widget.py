@@ -24,15 +24,30 @@ class GStreamerVideoWidget(QWidget):
     def start(self, ip, port: int):
         print(f"[GST] Listening for SRT stream on port: {port}")
 
-        # use ports to change pipeline based on ip vs usb
-        pipeline_str = (
-            f'srtsrc uri="srt://{ip}:{port}?mode=listener keep-listening=true" ! '
-            "h264parse ! "
-            "avdec_h264 ! "
-            "videoconvert ! "
-            "video/x-raw,format=BGR ! "
-            "appsink name=sink emit-signals=false sync=false max-buffers=1 drop=true"
-        )
+        if ip == "192.168.1.7" :
+            # use ports to change pipeline based on ip vs usb
+            pipeline_str = (
+                f'srtsrc uri="srt://{ip}:{port}?mode=caller keep-listening=true ! '
+                "h264parse ! "
+                "avdec_h264 ! "
+                "videoconvert ! "
+                "video/x-raw,format=BGR ! "
+                "appsink name=sink emit-signals=false sync=false max-buffers=1 drop=true"
+            )
+        # assume its the IP cams
+        else:
+            #gst-launch-1.0 rtspsrc location=rtspt://admin:@192.168.1.117:8554/profile1 latency=0 ! 
+            # rtph265depay ! h265parse !  avdec_h265 ! autovideosink sync=false
+            # both IP cameras uses port 8554
+            pipeline_str = (
+                f'rtspsrc location=rtspt://admin:@{ip}:8554/profile1 latency=0 ! '
+                "rtph265depay ! "
+                "h265parse ! "
+                "avdec_h265 ! "
+                "videoconvert ! "
+                "video/x-raw,format=BGR ! "
+                "appsink name=sink emit-signals=false sync=false max-buffers=1 drop=true"
+            )
 
         print(f"[GST PIPELINE] {pipeline_str}")
 
