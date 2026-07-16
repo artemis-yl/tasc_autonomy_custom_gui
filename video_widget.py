@@ -24,7 +24,8 @@ class GStreamerVideoWidget(QWidget):
     def start(self, ip, port: int):
         print(f"[GST] Listening for SRT stream on port: {port}")
 
-        if ip == "192.168.1.7" :
+        # 7091 is back, 7092 is orbbec color
+        if port == 7091 or  port == 7092:
             # use ports to change pipeline based on ip vs usb
             pipeline_str = (
                 f'srtsrc uri="srt://{ip}:{port}?mode=caller keep-listening=true ! '
