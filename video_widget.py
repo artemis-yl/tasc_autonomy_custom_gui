@@ -36,12 +36,12 @@ class GStreamerVideoWidget(QWidget):
                 "appsink name=sink emit-signals=false sync=false max-buffers=1 drop=true"
             )
         # assume its the IP cams
-        else:
+        elif port == 8554:
             #gst-launch-1.0 rtspsrc location=rtspt://admin:@192.168.1.117:8554/profile1 latency=0 ! 
             # rtph265depay ! h265parse !  avdec_h265 ! autovideosink sync=false
             # both IP cameras uses port 8554
             pipeline_str = (
-                f'rtspsrc location=rtspt://admin:@{ip}:8554/profile1 latency=0 ! '
+                f'rtspsrc location=rtspt://admin:@{ip}:{port}/profile1 latency=0 ! '
                 "rtph265depay ! "
                 "h265parse ! "
                 "avdec_h265 ! "
