@@ -36,10 +36,10 @@ class MainWindow(QMainWindow):
 
     def _start_cameras(self):
         print("[DEBUG] 🔥 Subscribing to network video streams...")
-        self.front_dock.start(port=7090)
-        self.back_dock.start(port=9002)
-        self.top_dock.start(port=9003)
-        self.arm_dock.start(port=9004)
+        self.front_dock.start(ip="192.168.1.7", port=7092) # usb cam on jetson
+        self.back_dock.start(ip="192.168.1.7", port=7091) # usb cam on jetson
+        self.top_dock.start(ip="192.168.1.117", port=8554) # ip cam w/ its own IP
+        self.arm_dock.start(ip="192.168.1.116", port=8554) # ip cam w/ its own IP
 
     def _setup_central_widget(self):
         self.central_widget = QQuickWidget()
