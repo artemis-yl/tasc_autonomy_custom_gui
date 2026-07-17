@@ -28,7 +28,7 @@ class GStreamerVideoWidget(QWidget):
         if port == 7091 or  port == 7092:
             # use ports to change pipeline based on ip vs usb
             pipeline_str = (
-                f'srtsrc uri="srt://{ip}:{port}?mode=caller keep-listening=true ! '
+                f'srtsrc uri="srt://{ip}:{port}?mode=caller" keep-listening=true ! '
                 "h264parse ! "
                 "avdec_h264 ! "
                 "videoconvert ! "
