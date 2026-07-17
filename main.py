@@ -16,10 +16,10 @@ from theme import apply_dark_theme
 
 # (key, camera name, stream port)
 CAMERAS = [
-    ("front", "Orbbec / Front", 7092),
-    ("back",  "WebCam / Back",  7091),
-    ("top",   "IP Cam / Top",   8554),
-    ("arm",   "IR Cam / ARM",   8554),
+    ("front", "Orbbec / Front", "192.168.1.7",   7092),
+    ("back",  "WebCam / Back",  "192.168.1.7",   7091),
+    ("top",   "IP Cam / Top",   "192.168.1.117", 8554),
+    ("arm",   "IR Cam / ARM",   "192.168.1.116", 8554),
 ]
 
 
@@ -133,8 +133,8 @@ class MainWindow(QMainWindow):
 
     def _start_cameras(self):
         print("[DEBUG] 🔥 Starting available cameras...")
-        for key, _name, port in CAMERAS:
-            self.camera_docks[key].start(port)
+        for key, _name, ip, port in CAMERAS:
+            self.camera_docks[key].start(ip, port)
 
     def _apply_to_camera(self, camera_name, settings):
         print(f"[DEBUG] Applying settings to {camera_name}")
