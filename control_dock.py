@@ -219,17 +219,34 @@ class CameraControlDock(QDockWidget):
         height = int(resolution_split[2])
 
         # even if command = 'stop' doesn't need the rest, it's fine to have
-        settings = {
-            'state': command,
-            'camera': camera_name_convert.get( self.camera_selector.currentText() ),
-            'width': width,
-            'height': height,
-            'fps': int(self.fps_combo.currentText()),
-            'bitrate': int(self.bitrate_combo.currentText()),
-        #    'brightness': self.brightness_slider.value(),
-        #    'flip_h': self.flip_h.isChecked(),
-        #    'flip_v': self.flip_v.isChecked(),
-        }
-        print(f"[{command}] {settings['camera']} → {settings}")
+        if (camera_name_convert.get(self.camera_selector.currentText())) == "orbbec_color_cam" or  (camera_name_convert.get(self.camera_selector.currentText())) == "back_web_cam":
+
+            settings = {
+                'state': command,
+                'camera': camera_name_convert.get( self.camera_selector.currentText() ),
+                'width': width,
+                'height': height,
+                'fps': int(self.fps_combo.currentText()),
+                'bitrate': int(self.bitrate_combo.currentText()),
+            #    'brightness': self.brightness_slider.value(),
+            #    'flip_h': self.flip_h.isChecked(),
+            #    'flip_v': self.flip_v.isChecked(),
+            }
+            print(f"Sent TCP Packet: [{command}] {settings['camera']} → {settings}")
+
+        if (camera_name_convert.get(self.camera_selector.currentText())) == "top" or  (camera_name_convert.get(self.camera_selector.currentText())) == "arm":
+
+            settings = {
+                'state': command,
+                'camera': camera_name_convert.get( self.camera_selector.currentText() ),
+                'width': width,
+                'height': height,
+                'fps': int(self.fps_combo.currentText()),
+                'bitrate': int(self.bitrate_combo.currentText()),
+            #    'brightness': self.brightness_slider.value(),
+            #    'flip_h': self.flip_h.isChecked(),
+            #    'flip_v': self.flip_v.isChecked(),
+            }
+            print(f"Sent ONVIF Packet: [{command}] {settings['camera']} → {settings}")
 
         
