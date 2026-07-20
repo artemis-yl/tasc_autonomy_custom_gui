@@ -19,22 +19,8 @@ class CameraTcpClient(QObject):
             print(f"Connecting to TCP server at {host}:{port}...")
             self.socket.connectToHost(host, port)
 
-    def send_camera_command(self, action: str, camera_type: str, resolution: str = "640x480", fps: int = 30):
-        if self.socket.state() == QAbstractSocket.SocketState.ConnectedState:
-            payload = {
-                "state": action.lower(),       # "play", "stop", "pause"
-                "camera": camera_type.lower(), # "arm", "back", "mina"
-                "resolution": resolution,
-                "fps": fps
-            }
-            packet = (json.dumps(payload) + "\n").encode('utf-8')
-            self.socket.write(packet)
-        else:
-            print("Cannot send command; Socket not connected.")
-
 
     def send_json(self, payload: dict) -> bool:
-
         if self.socket.state() == QAbstractSocket.SocketState.ConnectedState:
             packet = (json.dumps(payload) + "\n").encode('utf-8')
             self.socket.write(packet)
