@@ -2,6 +2,7 @@ import json
 from PySide6.QtCore import QObject, Slot
 from PySide6.QtNetwork import QTcpSocket, QAbstractSocket
 
+#Check
 class CameraTcpClient(QObject):
     def __init__(self, parent=None):
         super().__init__(parent)
