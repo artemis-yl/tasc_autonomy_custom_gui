@@ -34,14 +34,7 @@ class CameraTcpClient(QObject):
 
 
     def send_json(self, payload: dict) -> bool:
-        """Send an arbitrary JSON-serializable dict to the server as a
-        newline-terminated packet. Use this when the caller has already
-        built a full settings dict (e.g. from a UI) rather than going
-        through send_camera_command's fixed set of fields.
- 
-        Returns True if the packet was written, False if the socket
-        wasn't connected (nothing is queued/retried).
-        """
+
         if self.socket.state() == QAbstractSocket.SocketState.ConnectedState:
             packet = (json.dumps(payload) + "\n").encode('utf-8')
             self.socket.write(packet)
@@ -82,6 +75,6 @@ if __name__ == "__main__":
     client.connect_to_server("127.0.0.1", 8080)
     
     # Send a quick test packet right when it connects successfully
-    client.socket.connected.connect(lambda: client.send_camera_command("play", "back"))
+    client.socket.connected.connect(lambda: client.send_json("play", "back"))
     
     sys.exit(app.exec())
