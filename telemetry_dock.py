@@ -13,11 +13,11 @@ class TelemetryDock(QDockWidget):
             Qt.RightDockWidgetArea |
             Qt.BottomDockWidgetArea
         )
-        self.setMinimumHeight(140)
+        self.setMinimumHeight(105)
 
         container = QWidget()
         container.setStyleSheet("""
-            QWidget { background-color: #1e1e1e; color: #e0e0e0; }
+            QWidget { background-color: #151c24; color: #dce6ee; }
             QLabel { font-size: 12px; padding: 1px; }
         """)
         self._layout = QVBoxLayout(container)
@@ -26,8 +26,8 @@ class TelemetryDock(QDockWidget):
 
         self._sections = {}
 
-        self.summary_label = QLabel("Live stream stats")
-        self.summary_label.setStyleSheet("font-weight: bold; font-size: 13px;")
+        self.summary_label = QLabel("STREAM HEALTH  /  LIVE TELEMETRY")
+        self.summary_label.setStyleSheet("font-weight: 600; font-size: 10px; letter-spacing: 0.7px; color: #9bb4c7;")
         self._layout.addWidget(self.summary_label)
         self._layout.addStretch()
 
@@ -39,7 +39,7 @@ class TelemetryDock(QDockWidget):
 
         frame = QFrame()
         frame.setFrameShape(QFrame.StyledPanel)
-        frame.setStyleSheet("QFrame { border: 1px solid #333333; border-radius: 5px; padding: 4px; }")
+        frame.setStyleSheet("QFrame { background: #1a242e; border: 1px solid #304151; border-radius: 5px; padding: 4px; }")
         section_layout = QVBoxLayout(frame)
         section_layout.setContentsMargins(6, 6, 6, 6)
         section_layout.setSpacing(2)
@@ -70,7 +70,7 @@ class TelemetryDock(QDockWidget):
         latency = stats.get("latency_ms")
         bitrate = stats.get("bitrate_kbps")
         dropped = stats.get("dropped")
-        status = stats.get("status")
+        status = stats.get("status") or stats.get("state")
 
         section["status_label"].setText(
             (

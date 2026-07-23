@@ -13,7 +13,7 @@ class CameraDock(QDockWidget):
             QDockWidget.DockWidgetMovable |
             QDockWidget.DockWidgetClosable
         )
-        self.setMinimumSize(400, 300)
+        self.setMinimumSize(300, 220)
 
         self.video_widget = GStreamerVideoWidget()
         container = QWidget()
@@ -21,17 +21,18 @@ class CameraDock(QDockWidget):
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(0)
 
-        header = QLabel(self.camera_name)
+        header = QLabel("LIVE FEED  •  " + self.camera_name.upper())
         header.setStyleSheet("""
             QLabel {
-                background-color: #2a2a2a;
-                color: #ffffff;
-                padding: 4px 8px;
-                font-weight: bold;
-                font-size: 12px;
+                background-color: #131b22;
+                color: #9bb4c7;
+                padding: 6px 10px;
+                font-weight: 600;
+                font-size: 10px;
+                letter-spacing: 0.5px;
             }
         """)
-        header.setMaximumHeight(28)
+        header.setMaximumHeight(30)
 
         layout.addWidget(header)
         layout.addWidget(self.video_widget, 1)

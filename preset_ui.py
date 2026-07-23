@@ -10,7 +10,7 @@ from PySide6.QtWidgets import (
     QFormLayout, QLineEdit, QMessageBox, QVBoxLayout
 )
 from PySide6.QtCore import Qt
-from PySide6.QtGui import QAction
+from PySide6.QtGui import QAction, QActionGroup
 
 from layout_presets import LayoutPresetStore, PresetError
 
@@ -79,10 +79,24 @@ class LayoutPresetToolBar(QToolBar):
         self._apply_builtin = apply_builtin
 
         self.setMovable(False)
-        self.addWidget(QLabel("  Layout: "))
+        self.setToolButtonStyle(Qt.ToolButtonTextOnly)
+        self.addWidget(QLabel("  LAYOUTS  "))
+
+        self._builtin_actions = QActionGroup(self)
+        self._builtin_actions.setExclusive(True)
+        for name in self._builtin_names:
+            action = QAction(name, self)
+            action.setCheckable(True)
+            action.setToolTip(BUILTIN_TOOLTIP)
+            action.triggered.connect(lambda checked=False, n=name: self._select_builtin(n))
+            self._builtin_actions.addAction(action)
+            self.addAction(action)
+
+        self.addSeparator()
+        self.addWidget(QLabel("Saved: "))
 
         self.selector = QComboBox()
-        self.selector.setMinimumWidth(180)
+        self.selector.setMinimumWidth(150)
         self.selector.currentIndexChanged.connect(self._on_selected)
         self.addWidget(self.selector)
 
@@ -105,8 +119,9 @@ class LayoutPresetToolBar(QToolBar):
     def reset(self):
         """Select and apply the first built-in layout."""
         self.selector.blockSignals(True)
-        self.selector.setCurrentText(self._builtin_names[0])
+        self.selector.setCurrentIndex(-1)
         self.selector.blockSignals(False)
+        self._builtin_actions.actions()[0].setChecked(True)
         self._apply_builtin(self._builtin_names[0])
         self._sync_tooltip()
 
@@ -115,11 +130,6 @@ class LayoutPresetToolBar(QToolBar):
         sel = self.selector
         sel.blockSignals(True)
         sel.clear()
-
-        for name in self._builtin_names:
-            row = sel.count()
-            sel.addItem(name, "builtin")
-            sel.setItemData(row, BUILTIN_TOOLTIP, Qt.ToolTipRole)
 
         shared_names = self._store.names(LayoutPresetStore.SHARED)
         if shared_names:
@@ -141,6 +151,8 @@ class LayoutPresetToolBar(QToolBar):
             row = sel.findText(select)
             if row != -1:
                 sel.setCurrentIndex(row)
+            elif select in self._builtin_names:
+                self._builtin_actions.actions()[self._builtin_names.index(select)].setChecked(True)
         sel.blockSignals(False)
 
         self._sync_tooltip()
@@ -154,10 +166,7 @@ class LayoutPresetToolBar(QToolBar):
             return
         scope = self.selector.itemData(index, Qt.UserRole)
         name = self.selector.itemText(index)
-        if scope == "builtin":
-            self._apply_builtin(name)
-        else:
-            self._restore(name, scope)
+        self._restore(name, scope)
         self._sync_tooltip()
 
     def _restore(self, name, scope):
@@ -257,3 +266,10 @@ class LayoutPresetToolBar(QToolBar):
             return
 
         self.rebuild(select=self._builtin_names[0])
+
+    def _select_builtin(self, name):
+        """Apply a visible toolbar layout button."""
+        self.selector.blockSignals(True)
+        self.selector.setCurrentIndex(-1)
+        self.selector.blockSignals(False)
+        self._apply_builtin(name)

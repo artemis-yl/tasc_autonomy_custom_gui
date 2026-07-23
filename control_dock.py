@@ -25,14 +25,14 @@ class CameraControlDock(QDockWidget):
             QDockWidget.DockWidgetMovable |
             QDockWidget.DockWidgetClosable
         )
-        self.setMinimumWidth(280)
-        self.setMaximumWidth(400)
+        self.setMinimumWidth(225)
+        self.setMaximumWidth(320)
 
         scroll = QScrollArea()
         scroll.setWidgetResizable(True)
         scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         scroll.setStyleSheet("""
-            QScrollArea { border: none; background: #1e1e1e; }
+            QScrollArea { border: none; background: #151c24; }
             QScrollBar:vertical {
                 background: #2a2a2a;
                 width: 12px;
@@ -48,8 +48,8 @@ class CameraControlDock(QDockWidget):
 
         content = QWidget()
         content.setStyleSheet("""
-            QWidget { background-color: #1e1e1e; color: #e0e0e0; }
-            QLabel { font-size: 13px; margin-top: 8px; }
+            QWidget { background-color: #151c24; color: #dce6ee; }
+            QLabel { font-size: 12px; margin-top: 10px; color: #aebfcb; font-weight: 600; }
             QComboBox, QSlider {
                 background-color: #2a2a2a;
                 border: 1px solid #444444;
@@ -69,7 +69,8 @@ class CameraControlDock(QDockWidget):
         layout.setSpacing(8)
         layout.setAlignment(Qt.AlignTop)
 
-        # Camera Selection
+        # Stream
+        layout.addWidget(self._section_heading("Stream"))
         layout.addWidget(QLabel("Active Camera"))
         self.camera_selector = QComboBox()
         self.camera_selector.addItems([
@@ -82,7 +83,7 @@ class CameraControlDock(QDockWidget):
 
         line = QFrame()
         line.setFrameShape(QFrame.HLine)
-        line.setStyleSheet("color: #444444;")
+        line.setStyleSheet("color: #314150;")
         layout.addWidget(line)
 
         # Resolution
@@ -97,6 +98,16 @@ class CameraControlDock(QDockWidget):
         self.fps_combo.addItems(["10", "25", "30"])
         layout.addWidget(self.fps_combo)
 
+        layout.addWidget(QLabel("Bit Rate (kbps)"))
+        self.bitrate_combo = QComboBox()
+        self.bitrate_combo.addItems([
+            "250", "500", "1000", #"1500", "2000",
+        ])
+        self.bitrate_combo.setCurrentText("500")
+        layout.addWidget(self.bitrate_combo)
+
+        # Image
+        layout.addWidget(self._section_heading("Image"))
         # Brightness
         layout.addWidget(QLabel("Brightness"))
         self.brightness_value = QLabel("50%")
@@ -108,16 +119,8 @@ class CameraControlDock(QDockWidget):
         self.brightness_slider.setValue(50)
         layout.addWidget(self.brightness_slider)
 
-        # Bit Rate
-        layout.addWidget(QLabel("Bit Rate (kbps"))
-        self.bitrate_combo = QComboBox()
-        self.bitrate_combo.addItems([
-            "250", "500", "1000", #"1500", "2000",
-        ])
-        self.bitrate_combo.setCurrentText("500 kbps")
-        layout.addWidget(self.bitrate_combo)
-
-        # Flip / Mirror
+        # Orientation
+        layout.addWidget(self._section_heading("Orientation"))
         flip_layout = QHBoxLayout()
         self.flip_h = QPushButton("↔ Flip H")
         self.flip_h.setCheckable(True)
@@ -161,7 +164,7 @@ class CameraControlDock(QDockWidget):
         layout.addWidget(self.apply_btn)
 
         # Stop Cameras Button
-        self.stop_btn = QPushButton("Stop Camera Stream")
+        self.stop_btn = QPushButton("Stop Selected Stream")
         self.stop_btn.setMinimumHeight(36)
         self.stop_btn.setStyleSheet("""
             QPushButton {
@@ -188,11 +191,24 @@ class CameraControlDock(QDockWidget):
         self.brightness_slider.valueChanged.connect(
             lambda v: self.brightness_value.setText(f"{v}%")
         )
+        self.camera_selector.currentTextChanged.connect(self._update_title)
+        self._update_title(self.camera_selector.currentText())
 
         self.apply_btn.clicked.connect(self._on_apply)
         self.stop_btn.clicked.connect(self.stop_requested)
         
         
+    def _section_heading(self, text):
+        label = QLabel(text.upper())
+        label.setStyleSheet(
+            "color: #6fa8c8; font-size: 10px; font-weight: 700; "
+            "letter-spacing: 0.8px; margin-top: 14px;"
+        )
+        return label
+
+    def _update_title(self, camera_name):
+        self.setWindowTitle(f"Camera Controls — {camera_name}")
+
     # Both buttons end up sending a JSON message, it is just that their command differs
     def _on_apply(self):
         """Gather all settings and emit signal."""

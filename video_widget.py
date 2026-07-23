@@ -11,8 +11,8 @@ Gst.init(None)
 class GStreamerVideoWidget(QWidget):
     def __init__(self, parent=None):
         super().__init__(parent)
-        self.label = QLabel("Waiting for Stream...")
-        self.label.setStyleSheet("background:black; color:white; qproperty-alignment: 'AlignCenter';")
+        self.label = QLabel("NO VIDEO SIGNAL\nWaiting for stream")
+        self.label.setStyleSheet("background:#070a0d; color:#7890a2; qproperty-alignment: 'AlignCenter'; font-size: 13px; font-weight: 600;")
         layout = QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
         layout.addWidget(self.label)

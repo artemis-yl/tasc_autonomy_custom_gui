@@ -1,10 +1,8 @@
 import sys
-from pathlib import Path
 
-from PySide6.QtWidgets import QApplication, QMainWindow
-from PySide6.QtQuickWidgets import QQuickWidget
-from PySide6.QtCore import Qt, QUrl, QTimer, QSettings
-from PySide6.QtGui import QAction
+from PySide6.QtWidgets import QApplication, QMainWindow, QMessageBox
+from PySide6.QtCore import Qt, QTimer, QSettings
+from PySide6.QtGui import QAction, QGuiApplication, QKeySequence
 
 from camera_dock import CameraDock
 from control_dock import CameraControlDock
@@ -28,9 +26,13 @@ class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
         self.setObjectName("MainWindow")  # required for saveState()/restoreState()
-        self.setWindowTitle("TASC Autonomy GUI")
-        self.resize(1920, 1080)
-        self.setStyleSheet("QMainWindow { background-color: #0d0d0d; }")
+        self.setWindowTitle("TASC Autonomy | Camera Console")
+        # Start within the usable desktop area rather than assuming a 1080p panel.
+        available = QGuiApplication.primaryScreen().availableGeometry()
+        self.resize(
+            min(1600, int(available.width() * 0.94)),
+            min(960, int(available.height() * 0.90)),
+        )
         self.setDockOptions(
             QMainWindow.AnimatedDocks |
             QMainWindow.AllowTabbedDocks |
@@ -41,7 +43,6 @@ class MainWindow(QMainWindow):
         self.settings = QSettings("TASC", "AutonomyGUI")
         self.preset_store = LayoutPresetStore(self.settings)
 
-        self._setup_central_widget()
         self._setup_docks()
         self._setup_toolbar()
         self._setup_menu()
@@ -53,17 +54,11 @@ class MainWindow(QMainWindow):
         self._telemetry_timer.start(500)
 
         QTimer.singleShot(0, self._start_cameras)
+        QTimer.singleShot(0, lambda: self._apply_builtin_layout("Front Focus"))
 
     # ------------------------------------------------------------------
     # Setup
     # ------------------------------------------------------------------
-
-    def _setup_central_widget(self):
-        self.central_widget = QQuickWidget()
-        qml_path = Path(__file__).parent / "Camera_GUI" / "Main.qml"
-        self.central_widget.setSource(QUrl.fromLocalFile(str(qml_path)))
-        self.central_widget.setResizeMode(QQuickWidget.SizeRootObjectToView)
-        self.setCentralWidget(self.central_widget)
 
     def _setup_docks(self):
         self.camera_docks = {}
@@ -78,7 +73,7 @@ class MainWindow(QMainWindow):
         self.top_dock = self.camera_docks["top"]
         self.arm_dock = self.camera_docks["arm"]
 
-        self.front_dock.setMinimumSize(640, 480)
+        self.front_dock.setMinimumSize(480, 300)
         self.addDockWidget(Qt.LeftDockWidgetArea, self.front_dock)
         for key in ("back", "top", "arm"):
             self.addDockWidget(Qt.BottomDockWidgetArea, self.camera_docks[key])
@@ -109,9 +104,21 @@ class MainWindow(QMainWindow):
             restore_state=self.restoreState,
             apply_builtin=self._apply_builtin_layout,
         )
-        self.addToolBar(self.layout_toolbar)
 
     def _setup_menu(self):
+        self.layout_menu = self.menuBar().addMenu("&Layouts")
+        self.layout_menu.aboutToShow.connect(self._rebuild_layout_menu)
+        self._layout_actions = {}
+        for index, name in enumerate(BUILTIN_LAYOUT_NAMES, start=1):
+            action = QAction(name, self)
+            action.setShortcut(QKeySequence(f"Ctrl+{index}"))
+            action.setShortcutContext(Qt.WindowShortcut)
+            action.triggered.connect(
+                lambda checked=False, layout_name=name: self._apply_builtin_layout(layout_name)
+            )
+            self.addAction(action)
+            self._layout_actions[name] = action
+
         view_menu = self.menuBar().addMenu("&View")
         for dock in self.docks.values():
             view_menu.addAction(dock.toggleViewAction())
@@ -119,6 +126,58 @@ class MainWindow(QMainWindow):
         reset_action = QAction("Reset Layout", self)
         reset_action.triggered.connect(self.layout_toolbar.reset)
         view_menu.addAction(reset_action)
+
+    def _rebuild_layout_menu(self):
+        """Build a compact menu-bar home for layouts and stored presets."""
+        menu = self.layout_menu
+        menu.clear()
+
+        for name in BUILTIN_LAYOUT_NAMES:
+            menu.addAction(self._layout_actions[name])
+
+        menu.addSeparator()
+        saved_menu = menu.addMenu("Saved Layouts")
+        found_saved = False
+        for scope in (LayoutPresetStore.SHARED, LayoutPresetStore.LOCAL):
+            for name in self.preset_store.names(scope):
+                action = saved_menu.addAction(name)
+                action.setToolTip(f"{scope.title()} saved layout")
+                action.triggered.connect(
+                    lambda checked=False, n=name, s=scope: self.layout_toolbar._restore(n, s)
+                )
+                found_saved = True
+        if not found_saved:
+            placeholder = saved_menu.addAction("No saved layouts")
+            placeholder.setEnabled(False)
+
+        delete_menu = menu.addMenu("Delete Saved Layout")
+        found_deletable = False
+        for scope in (LayoutPresetStore.SHARED, LayoutPresetStore.LOCAL):
+            for name in self.preset_store.names(scope):
+                action = delete_menu.addAction(name)
+                action.triggered.connect(
+                    lambda checked=False, n=name, s=scope: self._delete_saved_layout(n, s)
+                )
+                found_deletable = True
+        if not found_deletable:
+            placeholder = delete_menu.addAction("No saved layouts")
+            placeholder.setEnabled(False)
+
+        menu.addSeparator()
+        save_action = menu.addAction("Save Current Layout as Preset...")
+        save_action.triggered.connect(self.layout_toolbar._save_current)
+
+    def _delete_saved_layout(self, name, scope):
+        where = "the shared project presets" if scope == LayoutPresetStore.SHARED else "this computer"
+        answer = QMessageBox.question(
+            self,
+            "Delete Saved Layout",
+            f'Delete the saved layout "{name}" from {where}?',
+            QMessageBox.Yes | QMessageBox.No,
+        )
+        if answer == QMessageBox.Yes:
+            self.preset_store.delete(name, scope)
+            self.layout_toolbar.rebuild(select=BUILTIN_LAYOUT_NAMES[0])
 
     # ------------------------------------------------------------------
     # Layouts
