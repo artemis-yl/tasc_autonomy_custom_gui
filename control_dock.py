@@ -3,13 +3,11 @@ from PySide6.QtWidgets import (
     QPushButton, QLabel, QSlider, QComboBox, QScrollArea, QFrame
 )
 from PySide6.QtCore import Qt, Signal
+
 from usb_camera_tcp_client import CameraTcpClient
 from ip_camera_onvif_control import ONVIFCameraSettings
+import constants as const 
 
-ONVIF_PORT = 6688
-USERNAME = "admin"
-PASSWORD = ""
-PROFILE = 1
 
 class CameraControlDock(QDockWidget):
     """
@@ -29,16 +27,22 @@ class CameraControlDock(QDockWidget):
         # set up the ONVIF control object for the IP cameras
         onvif = {
             "arm" : ONVIFCameraSettings(
-                        camera_ip="192.168.1.116", onvif_port=ONVIF_PORT, 
-                        username=USERNAME, password=PASSWORD, 
-                        profile_index=PROFILE
+                        camera_ip = const.CAMERA_INFO["IP Cam 2 / ARM"]["ip"], 
+                        onvif_port = const.IP_ONVIF_PORT, 
+                        username = const.ONVIF_USERNAME, 
+                        password = const.ONVIF_PASSWORD, 
+                        profile_index = const.ONVIF_PROFILE
                     ),
             "top" : ONVIFCameraSettings(
-                        camera_ip="192.168.1.117", onvif_port=ONVIF_PORT, 
-                        username=USERNAME, password=PASSWORD, 
-                        profile_index=PROFILE
+                        camera_ip = const.CAMERA_INFO["IP Cam / Top"]["ip"], 
+                        onvif_port = const.IP_ONVIF_PORT, 
+                        username = const.ONVIF_USERNAME, 
+                        password = const.ONVIF_PASSWORD, 
+                        profile_index = const.ONVIF_PROFILE
                     )
         }
+        
+
 
         self.setAllowedAreas(Qt.AllDockWidgetAreas)
         self.setFeatures(
@@ -297,6 +301,7 @@ class CameraControlDock(QDockWidget):
             onvif[camera_name].change_resolution(NEW_WIDTH, NEW_HEIGHT)
             onvif[camera_name].change_fps(NEW_FPS)
             onvif[camera_name].change_bitrate(NEW_BITRATE_KBPS)
+            # note that the onvif methods have their own print methods to confirm changes
             print(f"Changed via ONVIF")
 
         
