@@ -4,6 +4,12 @@ from PySide6.QtWidgets import (
 )
 from PySide6.QtCore import Qt, Signal
 from usb_camera_tcp_client import CameraTcpClient
+from ip_camera_onvif_control import ONVIFCameraSettings
+
+ONVIF_PORT = 6688
+USERNAME = "admin"
+PASSWORD = ""
+PROFILE = 1
 
 class CameraControlDock(QDockWidget):
     """
@@ -13,14 +19,26 @@ class CameraControlDock(QDockWidget):
     settings_applied = Signal(dict)
     stop_requested = Signal(dict)
 
-    def __init__(self, parent=None, host: str ="127.0.0.1", port: int = 8080):
+    def __init__(self, parent=None, host: str ="127.0.0.1", port: int = 8080, ip_dictionary):
         super().__init__("Camera Controls", parent)
 
         # set up the TCP Client for controlling the USB cameras
         self.tcp_client = CameraTcpClient(self)
         self.tcp_client.connect_to_server(host, port)
 
-        # set up the ONVIF methods for controlling the IP cameras
+        # set up the ONVIF control object for the IP cameras
+        onvif = {
+            "arm" : ONVIFCameraSettings(
+                        camera_ip="192.168.1.116", onvif_port=ONVIF_PORT, 
+                        username=USERNAME, password=PASSWORD, 
+                        profile_index=PROFILE
+                    ),
+            "top" : ONVIFCameraSettings(
+                        camera_ip="192.168.1.117", onvif_port=ONVIF_PORT, 
+                        username=USERNAME, password=PASSWORD, 
+                        profile_index=PROFILE
+                    )
+        }
 
         self.setAllowedAreas(Qt.AllDockWidgetAreas)
         self.setFeatures(
@@ -241,18 +259,22 @@ class CameraControlDock(QDockWidget):
 
         camera_name = camera_name_convert.get(self.camera_selector.currentText())
             
-        # extract width and height from resolution -ex) 1280 x 720
-        resolution_split = self.res_combo.currentText().split()
+        # extract all settings
+        resolution_split = self.res_combo.currentText().split() # width and height from resolution -ex) 1280 x 720
         width = int(resolution_split[0])
         height = int(resolution_split[2])
-
-        settings = {
+        fps =  int(self.fps_combo.currentText())
+        bitrate = int(self.bitrate_combo.currentText())
+             
+        # even if command = 'stop' doesn't need the rest, it's fine to have
+        if camera_name == "orbbec_color" or camera_name == "back":
+            settings = {
                 'state': command,
                 'camera': camera_name,
                 'width': width,
                 'height': height,
-                'fps': int(self.fps_combo.currentText()),
-                'bitrate': int(self.bitrate_combo.currentText()),
+                'fps': fps,
+                'bitrate': bitrate,
             #   'exposure_mode': , #Auto vs Manual
             # at the moment, these 3 are for the 2 ip cameras. need to double check how the back cam and orbbec do it
             #   'exposure_minrate': ,
@@ -263,10 +285,6 @@ class CameraControlDock(QDockWidget):
             #    'flip_h': self.flip_h.isChecked(),
             #    'flip_v': self.flip_v.isChecked(),
             }
-        
-        
-        # even if command = 'stop' doesn't need the rest, it's fine to have
-        if camera_name == "orbbec_color" or camera_name == "back":
             sent_packet = self.tcp_client.send_json(settings)
             if sent_packet:
                 print(f"Sent TCP Packet: [{command}] {settings['camera']} → {settings}")
@@ -276,7 +294,9 @@ class CameraControlDock(QDockWidget):
             
 
         elif camera_name == "top" or camera_name == "arm":
-            # onvifmethod.ashdajjas()
-            print(f"Sent ONVIF Packet: [{command}] {settings['camera']} → {settings}")
+            onvif[camera_name].change_resolution(NEW_WIDTH, NEW_HEIGHT)
+            onvif[camera_name].change_fps(NEW_FPS)
+            onvif[camera_name].change_bitrate(NEW_BITRATE_KBPS)
+            print(f"Changed via ONVIF")
 
         
