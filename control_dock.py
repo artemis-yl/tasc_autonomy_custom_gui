@@ -19,7 +19,7 @@ class CameraControlDock(QDockWidget):
     settings_applied = Signal(dict)
     stop_requested = Signal(dict)
 
-    def __init__(self, parent=None, host: str ="127.0.0.1", port: int = 8080, ip_dictionary):
+    def __init__(self, parent=None, host: str ="127.0.0.1", port: int = 8080):
         super().__init__("Camera Controls", parent)
 
         # set up the TCP Client for controlling the USB cameras
