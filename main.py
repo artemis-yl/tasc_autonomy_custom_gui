@@ -47,7 +47,7 @@ class MainWindow(QMainWindow):
         self._setup_toolbar()
         self._setup_menu()
 
-        self.control_dock.settings_applied.connect(self._apply_to_camera)
+        self._dock.settings_applied.connect(self._apply_to_camera)
 
         self._telemetry_timer = QTimer(self)
         self._telemetry_timer.timeout.connect(self._update_telemetry)
@@ -80,7 +80,7 @@ class MainWindow(QMainWindow):
         self.tabifyDockWidget(self.back_dock, self.top_dock)
         self.tabifyDockWidget(self.back_dock, self.arm_dock)
 
-        self.control_dock = CameraControlDock(self)
+        self.control_dock = CameraControlDock(self, "192.168.1.7", 54321)
         self.control_dock.setObjectName("control_dock")
         self.addDockWidget(Qt.RightDockWidgetArea, self.control_dock)
 
