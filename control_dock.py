@@ -3,7 +3,9 @@ from PySide6.QtWidgets import (
     QPushButton, QLabel, QSlider, QComboBox, QScrollArea, QFrame
 )
 from PySide6.QtCore import Qt, Signal
-from camera_client import CameraTcpClient
+from control_tcp_client import CameraTcpClient
+from control_onvif import ONVIFCameraSettings
+import constants as const 
 
 class CameraControlDock(QDockWidget):
     """
@@ -15,9 +17,32 @@ class CameraControlDock(QDockWidget):
 
     def __init__(self, parent=None, host: str ="127.0.0.1", port: int = 8080):
         super().__init__("Camera Controls", parent)
-
+        
+        # set up the TCP Client for controlling the USB cameras
         self.tcp_client = CameraTcpClient(self)
         self.tcp_client.connect_to_server(host, port)
+        
+        # set up the ONVIF control object for the IP cameras
+        
+        # for some reason, the onvif set up blocks
+        """
+        onvif = {
+            "arm" : ONVIFCameraSettings(
+                        camera_ip = const.CAMERA_INFO["IP Cam 2 / ARM"]["ip"], 
+                        onvif_port = const.IP_ONVIF_PORT, 
+                        username = const.ONVIF_USERNAME, 
+                        password = const.ONVIF_PASSWORD, 
+                        profile_index = const.ONVIF_PROFILE
+                    ),
+            "top" : ONVIFCameraSettings(
+                        camera_ip = const.CAMERA_INFO["IP Cam / Top"]["ip"], 
+                        onvif_port = const.IP_ONVIF_PORT, 
+                        username = const.ONVIF_USERNAME, 
+                        password = const.ONVIF_PASSWORD, 
+                        profile_index = const.ONVIF_PROFILE
+                    )
+        }
+        """
 
         self.setAllowedAreas(Qt.AllDockWidgetAreas)
         self.setFeatures(
