@@ -24,7 +24,6 @@ class CameraTcpClient(QObject):
         if self.socket.state() == QAbstractSocket.SocketState.ConnectedState:
             packet = (json.dumps(payload) + "\n").encode('utf-8')
             self.socket.write(packet)
-            print("TCP Client: Sent JSON packet.")
             return True
         else:
             print("Cannot send command; Socket not connected.")
