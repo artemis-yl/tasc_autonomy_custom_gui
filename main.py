@@ -80,7 +80,7 @@ class MainWindow(QMainWindow):
         self.tabifyDockWidget(self.back_dock, self.top_dock)
         self.tabifyDockWidget(self.back_dock, self.arm_dock)
 
-        self.control_dock = CameraControlDock(self)
+        self.control_dock = CameraControlDock(self, "192.168.1.7", 54321)
         self.control_dock.setObjectName("control_dock")
         self.addDockWidget(Qt.RightDockWidgetArea, self.control_dock)
 

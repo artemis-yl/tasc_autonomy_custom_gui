@@ -18,6 +18,11 @@ class CameraTcpClient(QObject):
         if self.socket.state() == QAbstractSocket.SocketState.UnconnectedState:
             print(f"Connecting to TCP server at {host}:{port}...")
             self.socket.connectToHost(host, port)
+            
+    def disconnect_from_server(self):
+        print(f"Disconnecting from TCP server at {host}:{port}...")
+        self.socket.abort()
+        print("Finished disconnect from TCP server")
 
 
     def send_json(self, payload: dict) -> bool:

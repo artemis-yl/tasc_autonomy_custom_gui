@@ -1,8 +1,14 @@
 from onvif import ONVIFCamera
+from zeep.transports import Transport
 
 class ONVIFCameraSettings:
     def __init__(self, camera_ip: str, onvif_port: int, username: str, password: str, profile_index: int = 0):
-        self.camera = ONVIFCamera(camera_ip, onvif_port, username, password)
+        transport = Transport(operation_timeout=5)
+        try:
+            self.camera = ONVIFCamera(camera_ip, onvif_port, username, password, transport=transport)
+        except Exception as e:
+            print(f"Connection failed: {e}")
+        print("Connection to IP {camera_ip}:{onvif_port}")
         self.media = self.camera.create_media_service()
         self.profiles = self.media.GetProfiles()
         if profile_index < 0 or profile_index >= len(self.profiles):

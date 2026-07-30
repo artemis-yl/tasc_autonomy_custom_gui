@@ -1,11 +1,13 @@
 from PySide6.QtWidgets import (
     QDockWidget, QWidget, QVBoxLayout, QHBoxLayout,
-    QPushButton, QLabel, QSlider, QComboBox, QScrollArea, QFrame
+    QLabel, QSlider, QComboBox, QScrollArea, QFrame,
+    QPushButton, QCheckBox
 )
 from PySide6.QtCore import Qt, Signal
 from control_tcp_client import CameraTcpClient
 from control_onvif import ONVIFCameraSettings
 import constants as const 
+
 
 class CameraControlDock(QDockWidget):
     """
@@ -15,35 +17,15 @@ class CameraControlDock(QDockWidget):
     settings_applied = Signal(dict)
     stop_requested = Signal(dict)
 
-    def __init__(self, parent=None, host: str ="127.0.0.1", port: int = 8080):
+    def __init__(self, parent=None, tcp_host: str ="127.0.0.1", tcp_port: int = 8080):
         super().__init__("Camera Controls", parent)
         
-        # set up the TCP Client for controlling the USB cameras
+        self.tcp_host = tcp_host
+        self.tcp_port = tcp_port
         self.tcp_client = CameraTcpClient(self)
-        self.tcp_client.connect_to_server(host, port)
         
-        # set up the ONVIF control object for the IP cameras
-        
-        # for some reason, the onvif set up blocks
-        """
-        onvif = {
-            "arm" : ONVIFCameraSettings(
-                        camera_ip = const.CAMERA_INFO["IP Cam 2 / ARM"]["ip"], 
-                        onvif_port = const.IP_ONVIF_PORT, 
-                        username = const.ONVIF_USERNAME, 
-                        password = const.ONVIF_PASSWORD, 
-                        profile_index = const.ONVIF_PROFILE
-                    ),
-            "top" : ONVIFCameraSettings(
-                        camera_ip = const.CAMERA_INFO["IP Cam / Top"]["ip"], 
-                        onvif_port = const.IP_ONVIF_PORT, 
-                        username = const.ONVIF_USERNAME, 
-                        password = const.ONVIF_PASSWORD, 
-                        profile_index = const.ONVIF_PROFILE
-                    )
-        }
-        """
-
+        self.onvif_controllers = {}
+    
         self.setAllowedAreas(Qt.AllDockWidgetAreas)
         self.setFeatures(
             QDockWidget.DockWidgetFloatable |
@@ -93,7 +75,22 @@ class CameraControlDock(QDockWidget):
         layout.setContentsMargins(16, 16, 16, 16)
         layout.setSpacing(8)
         layout.setAlignment(Qt.AlignTop)
-
+        
+        # Controls for USB/TCP and IP/ONVIF
+        # one to connect/disconnect TCP client
+        self.tcp_checkbox = QCheckBox(text="USB / TCP")
+        layout.addWidget(self.tcp_checkbox)
+        self.tcp_checkbox.stateChanged.connect(self.onStateChanged_tcp)
+        # one to connect/disconnect onvif top
+        self.arm_checkbox = QCheckBox(text="ARM ONVIF")
+        layout.addWidget(self.arm_checkbox)
+        self.arm_checkbox.stateChanged.connect(self.onStateChanged_arm)
+        # one to connect/disconnect onvif top
+        self.top_checkbox = QCheckBox(text="TOP ONVIF")
+        layout.addWidget(self.top_checkbox)
+        self.top_checkbox.stateChanged.connect(self.onStateChanged_top)
+        
+        
         # Stream
         layout.addWidget(self._section_heading("Stream"))
         layout.addWidget(QLabel("Active Camera"))
@@ -222,6 +219,82 @@ class CameraControlDock(QDockWidget):
         self.apply_btn.clicked.connect(self._on_apply)
         self.stop_btn.clicked.connect(self.stop_requested)
         
+    def onStateChanged_tcp(self):
+        if self.tcp_checkbox.isChecked():
+            self.tcp_checkbox.setText("USB / TCP - Connected")
+            self.tcp_client.connect_to_server(self.tcp_host, self.tcp_port)
+        else:
+            self.tcp_checkbox.setText("USB / TCP - Disconnected")
+            self.tcp_client.disconnect_from_server()
+            
+    def onStateChanged_arm(self):
+        if self.arm_checkbox.isChecked():
+            self.arm_checkbox.setText("ARM / ONVIF - Connected")
+            self.onvif_controllers.update(
+                {"arm" : ONVIFCameraSettings(
+                                camera_ip = const.CAMERA_INFO["IP Cam 2 / ARM"]["ip"], 
+                                onvif_port = const.IP_ONVIF_PORT, 
+                                username = const.ONVIF_USERNAME, 
+                                password = const.ONVIF_PASSWORD, 
+                                profile_index = const.ONVIF_PROFILE
+                            )
+                }
+            )
+
+        else:
+            self.arm_checkbox.setText("ARM / ONVIF - Disconnected")
+            self.onvif_controllers['arm'] = None
+
+            
+    def onStateChanged_top(self):
+        if self.top_checkbox.isChecked():
+            self.top_checkbox.setText("TOP / ONVIF - Connected")
+            self.onvif_controllers.update(
+                {"top" : ONVIFCameraSettings(
+                                camera_ip = const.CAMERA_INFO["IP Cam / Top"]["ip"], 
+                                onvif_port = const.IP_ONVIF_PORT, 
+                                username = const.ONVIF_USERNAME, 
+                                password = const.ONVIF_PASSWORD, 
+                                profile_index = const.ONVIF_PROFILE
+                            )
+                }
+            )
+
+        else:
+            self.top_checkbox.setText("TOP / ONVIF - Disconnected")
+            self.onvif_controllers['top'] = None
+
+    
+    def _open_arm(self):
+        self.onvif_controllers.update(
+            {"arm" : ONVIFCameraSettings(
+                            camera_ip = const.CAMERA_INFO["IP Cam 2 / ARM"]["ip"], 
+                            onvif_port = const.IP_ONVIF_PORT, 
+                            username = const.ONVIF_USERNAME, 
+                            password = const.ONVIF_PASSWORD, 
+                            profile_index = const.ONVIF_PROFILE
+                        )
+            }
+        )
+    
+    def _open_top(self):
+        self.onvif_controllers.update(
+            {"top" : ONVIFCameraSettings(
+                            camera_ip = const.CAMERA_INFO["IP Cam / Top"]["ip"], 
+                            onvif_port = const.IP_ONVIF_PORT, 
+                            username = const.ONVIF_USERNAME, 
+                            password = const.ONVIF_PASSWORD, 
+                            profile_index = const.ONVIF_PROFILE
+                        )
+            }
+        )
+    
+   
+    def _close_arm(self):
+        self.onvif_controllers['arm'] = None
+        
+    def _close_top(self):
+        self.onvif_controllers['top'] = None
         
     def _section_heading(self, text):
         label = QLabel(text.upper())
