@@ -19,12 +19,6 @@ class CameraControlDock(QDockWidget):
 
     def __init__(self, parent=None, tcp_host: str ="127.0.0.1", tcp_port: int = 8080):
         super().__init__("Camera Controls", parent)
-        
-        self.tcp_host = tcp_host
-        self.tcp_port = tcp_port
-        self.tcp_client = CameraTcpClient(self)
-        
-        self.onvif_controllers = {}
     
         self.setAllowedAreas(Qt.AllDockWidgetAreas)
         self.setFeatures(
@@ -76,7 +70,13 @@ class CameraControlDock(QDockWidget):
         layout.setSpacing(8)
         layout.setAlignment(Qt.AlignTop)
         
-        # Controls for USB/TCP and IP/ONVIF
+        # Controls for USB/TCP and IP/ONVIF ======================================
+        self.tcp_host = tcp_host
+        self.tcp_port = tcp_port
+        self.tcp_client = CameraTcpClient(self)
+        
+        self.onvif_controllers = {}
+
         # one to connect/disconnect TCP client
         self.tcp_checkbox = QCheckBox(text="USB / TCP")
         layout.addWidget(self.tcp_checkbox)
@@ -89,6 +89,7 @@ class CameraControlDock(QDockWidget):
         self.top_checkbox = QCheckBox(text="TOP ONVIF")
         layout.addWidget(self.top_checkbox)
         self.top_checkbox.stateChanged.connect(self.onStateChanged_top)
+        # =========================================================================
         
         
         # Stream
@@ -130,16 +131,37 @@ class CameraControlDock(QDockWidget):
 
         # Image
         layout.addWidget(self._section_heading("Image"))
-        # Brightness
-        layout.addWidget(QLabel("Brightness"))
-        self.brightness_value = QLabel("50%")
-        self.brightness_value.setStyleSheet("color: #888888; font-size: 11px;")
-        layout.addWidget(self.brightness_value)
 
-        self.brightness_slider = QSlider(Qt.Horizontal)
-        self.brightness_slider.setRange(0, 100)
-        self.brightness_slider.setValue(50)
-        layout.addWidget(self.brightness_slider)
+        # Exposure
+        layout.addWidget(QLabel("Exposure"))
+        self.exposure_value = QLabel("50%")
+        self.exposure_value.setStyleSheet("color: #888888; font-size: 11px;")
+        layout.addWidget(self.exposure_value)
+
+        self.autoExposure_checkbox = QCheckBox(text="Auto Exposure On")
+        layout.addWidget(self.autoExposure_checkbox)
+        self.autoExposure_checkbox.setChecked(True)  # Initialize the checkbox state
+        self.autoExposure_checkbox.stateChanged.connect(self.onStateChanged_autoExposure)
+
+        self.exposureAutoOn = True  # Track the state of auto exposure
+
+        self.maxExposureLabel = QLabel("Max Exposure Time")
+        layout.addWidget(self.maxExposureLabel)
+        self.maxExposureTime_slider = QSlider(Qt.Horizontal)
+        self.maxExposureTime_slider.setRange(0, 100)
+        self.maxExposureTime_slider.setValue(50)
+        layout.addWidget(self.maxExposureTime_slider)
+
+        self.minExposureLabel = QLabel("Min Exposure Time")
+        layout.addWidget(self.minExposureLabel)
+        self.minExposureTime_slider = QSlider(Qt.Horizontal)
+        self.minExposureTime_slider.setRange(0, 100)
+        self.minExposureTime_slider.setValue(50)
+        layout.addWidget(self.minExposureTime_slider)
+
+        self.autoExposure_checkbox.toggled.connect(self.minExposureTime_slider.setVisible)
+        self.autoExposure_checkbox.toggled.connect(self.minExposureLabel.setVisible)
+       
 
         # Orientation
         layout.addWidget(self._section_heading("Orientation"))
@@ -210,8 +232,8 @@ class CameraControlDock(QDockWidget):
         self.setWidget(scroll)
 
         # Signals
-        self.brightness_slider.valueChanged.connect(
-            lambda v: self.brightness_value.setText(f"{v}%")
+        self.maxExposureTime_slider.valueChanged.connect(
+            lambda v: self.exposure_value.setText(f"{v}%")
         )
         self.camera_selector.currentTextChanged.connect(self._update_title)
         self._update_title(self.camera_selector.currentText())
@@ -230,17 +252,15 @@ class CameraControlDock(QDockWidget):
     def onStateChanged_arm(self):
         if self.arm_checkbox.isChecked():
             self.arm_checkbox.setText("ARM / ONVIF - Connected")
-            self.onvif_controllers.update(
-                {"arm" : ONVIFCameraSettings(
-                                camera_ip = const.CAMERA_INFO["IP Cam 2 / ARM"]["ip"], 
-                                onvif_port = const.IP_ONVIF_PORT, 
-                                username = const.ONVIF_USERNAME, 
-                                password = const.ONVIF_PASSWORD, 
-                                profile_index = const.ONVIF_PROFILE
-                            )
-                }
-            )
-
+            self.onvif_controllers.update({
+                "arm" : ONVIFCameraSettings(
+                    camera_ip = const.CAMERA_INFO["IP Cam 2 / ARM"]["ip"], 
+                    onvif_port = const.IP_ONVIF_PORT, 
+                    username = const.ONVIF_USERNAME, 
+                    password = const.ONVIF_PASSWORD, 
+                    profile_index = const.ONVIF_PROFILE
+                )
+            })
         else:
             self.arm_checkbox.setText("ARM / ONVIF - Disconnected")
             self.onvif_controllers['arm'] = None
@@ -249,53 +269,28 @@ class CameraControlDock(QDockWidget):
     def onStateChanged_top(self):
         if self.top_checkbox.isChecked():
             self.top_checkbox.setText("TOP / ONVIF - Connected")
-            self.onvif_controllers.update(
-                {"top" : ONVIFCameraSettings(
-                                camera_ip = const.CAMERA_INFO["IP Cam / Top"]["ip"], 
-                                onvif_port = const.IP_ONVIF_PORT, 
-                                username = const.ONVIF_USERNAME, 
-                                password = const.ONVIF_PASSWORD, 
-                                profile_index = const.ONVIF_PROFILE
-                            )
-                }
-            )
-
+            self.onvif_controllers.update({
+                "top" : ONVIFCameraSettings(
+                    camera_ip = const.CAMERA_INFO["IP Cam / Top"]["ip"], 
+                    onvif_port = const.IP_ONVIF_PORT, 
+                    username = const.ONVIF_USERNAME, 
+                    password = const.ONVIF_PASSWORD, 
+                    profile_index = const.ONVIF_PROFILE
+                )
+            })
         else:
             self.top_checkbox.setText("TOP / ONVIF - Disconnected")
             self.onvif_controllers['top'] = None
 
     
-    def _open_arm(self):
-        self.onvif_controllers.update(
-            {"arm" : ONVIFCameraSettings(
-                            camera_ip = const.CAMERA_INFO["IP Cam 2 / ARM"]["ip"], 
-                            onvif_port = const.IP_ONVIF_PORT, 
-                            username = const.ONVIF_USERNAME, 
-                            password = const.ONVIF_PASSWORD, 
-                            profile_index = const.ONVIF_PROFILE
-                        )
-            }
-        )
-    
-    def _open_top(self):
-        self.onvif_controllers.update(
-            {"top" : ONVIFCameraSettings(
-                            camera_ip = const.CAMERA_INFO["IP Cam / Top"]["ip"], 
-                            onvif_port = const.IP_ONVIF_PORT, 
-                            username = const.ONVIF_USERNAME, 
-                            password = const.ONVIF_PASSWORD, 
-                            profile_index = const.ONVIF_PROFILE
-                        )
-            }
-        )
-    
-   
-    def _close_arm(self):
-        self.onvif_controllers['arm'] = None
-        
-    def _close_top(self):
-        self.onvif_controllers['top'] = None
-        
+    def onStateChanged_autoExposure(self):
+        if self.autoExposure_checkbox.isChecked():
+            self.autoExposure_checkbox.setText("Auto Exposure On")
+            self.exposureAutoOn = True
+        else:
+            self.autoExposure_checkbox.setText("Manual Exposure")
+            self.exposureAutoOn = False
+
     def _section_heading(self, text):
         label = QLabel(text.upper())
         label.setStyleSheet(
@@ -330,37 +325,56 @@ class CameraControlDock(QDockWidget):
             "IP Cam 2 / ARM" : "arm"
         }
             
-        # extract width and height from resolution -ex) 1280 x 720
+        # extract all settings from the GUI
+        camera_name = camera_name_convert.get(self.camera_selector.currentText())
         resolution_split = self.res_combo.currentText().split()
         width = int(resolution_split[0])
         height = int(resolution_split[2])
+        fps = int(self.fps_combo.currentText())
+        bitrate = int(self.bitrate_combo.currentText())
+        max_exposure = self.maxExposureTime_slider.value()
+        min_exposure = self.minExposureTime_slider.value()
 
-        settings = {
+        
+        # even if command = 'stop' doesn't need the rest, it's fine to have
+        if (camera_name) == "orbbec_color" or  (camera_name) == "back":
+            settings = {
                 'state': command,
-                'camera': camera_name_convert.get(self.camera_selector.currentText()),
+                'camera': camera_name,
                 'width': width,
                 'height': height,
-                'fps': int(self.fps_combo.currentText()),
-                'bitrate': int(self.bitrate_combo.currentText()),
-            #    'brightness': self.brightness_slider.value(),
+                'fps': fps,
+                'bitrate': bitrate,
+            
+            #    'max_exposure': max_exposure,
+            #    'min_exposure': min_exposure,
             #    'flip_h': self.flip_h.isChecked(),
             #    'flip_v': self.flip_v.isChecked(),
             }
-        
-        camera_name = camera_name_convert.get(self.camera_selector.currentText())
-
-        # even if command = 'stop' doesn't need the rest, it's fine to have
-        if (camera_name) == "orbbec_color" or  (camera_name) == "back":
             sent_packet = self.tcp_client.send_json(settings)
             if sent_packet:
                 print(f"Sent TCP Packet: [{command}] {settings['camera']} → {settings}")
             else:
                 print(f"Could not send TCP packet for {camera_name_convert.get( self.camera_selector.currentText())} "
                       f"(socket not connected) → {settings}")
-            
 
-        elif (camera_name) == "top" or  (camera_name) == "arm":
-            # onvifmethod.ashdajjas()
-            print(f"Sent ONVIF Packet: [{command}] {settings['camera']} → {settings}")
+        else:            
+
+            if (camera_name) == "top":
+                # onvifmethod.ashdajjas()
+                onvif_camera = self.onvif_controllers["top"]
+            elif (camera_name) == "arm":
+                onvif_camera = self.onvif_controllers["arm"]
+
+            onvif_camera.change_resolution(width, height)
+            onvif_camera.change_fps(fps)
+            onvif_camera.change_bitrate(bitrate)
+            #if self.exposureAutoOn:
+            #    onvif_camera.set_auto_exposure(min_exposure, max_exposure)
+            #else:
+            #    onvif_camera.set_manual_exposure(max_exposure)
+            print(f"Sent ONVIF Packet to {camera_name}: [{command}] {settings['camera']} → {settings}")
+
+
 
         
