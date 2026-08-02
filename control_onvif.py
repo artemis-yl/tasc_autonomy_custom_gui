@@ -8,20 +8,16 @@ class ONVIFCameraSettings:
             self.camera = ONVIFCamera(camera_ip, onvif_port, username, password, transport=transport)
         except Exception as e:
             print(f"Connection failed: {e}")
-        print("Connection to IP {camera_ip}:{onvif_port}")
-
+        print(f"Connection to IP {camera_ip}:{onvif_port}")
         self.media = self.camera.create_media_service()
-        self.imaging = self.camera.create_imaging_service()
         self.profiles = self.media.GetProfiles()
         if profile_index < 0 or profile_index >= len(self.profiles):
             raise IndexError(f"Invalid profile index {profile_index}. " f"Camera has {len(self.profiles)} profiles.")
         self.profile = self.profiles[profile_index]
 
-        self.video_source_token = (self.profile.VideoSourceConfiguration.SourceToken)
-
     def get_encoder_config(self):
         """Retrieve the latest video encoder configuration with GetVideoEncoderConfiguration() method."""
-        configuration_token = self.video_source_token
+        configuration_token = (self.profile.VideoEncoderConfiguration.token)
         return self.media.GetVideoEncoderConfiguration({"ConfigurationToken": configuration_token})
 
     def save_encoder_config(self, config):
@@ -92,23 +88,3 @@ class ONVIFCameraSettings:
         print(f"Requested bitrate: " f"{new_bitrate_kbps} kbps")
         print(f"Applied bitrate: " f"{applied_bitrate} kbps")
         return applied_bitrate
-
-    def get_exposure(self):
-        settings = self.imaging.GetImagingSettings({"VideoSourceToken": self.video_source_token})
-        return settings.Exposure
-
-    def set_manual_exposure(self, exposure_time=10000.0):
-        settings = self.imaging.GetImagingSettings({"VideoSourceToken": self.video_source_token})
-        settings.Exposure.Mode = "MANUAL"
-        settings.Exposure.ExposureTime = exposure_time
-        self.imaging.SetImagingSettings({"VideoSourceToken": self.video_source_token, "ImagingSettings": settings, "ForcePersistence": True})
-
-    def set_auto_exposure(self, min_exposure_time, max_exposure_time):
-        settings = self.imaging.GetImagingSettings({"VideoSourceToken": self.video_source_token})
-        settings.Exposure.Mode = "AUTO"
-        settings.Exposure.MinExposureTime = (min_exposure_time)
-        settings.Exposure.MaxExposureTime = (max_exposure_time)
-        self.imaging.SetImagingSettings({"VideoSourceToken": self.video_source_token, "ImagingSettings": settings, "ForcePersistence": True})
-
-    def get_exposure_options(self):
-        return self.imaging.GetOptions({"VideoSourceToken": self.video_source_token}).Exposure

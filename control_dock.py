@@ -75,7 +75,8 @@ class CameraControlDock(QDockWidget):
         self.tcp_port = tcp_port
         self.tcp_client = CameraTcpClient(self)
         
-        self.onvif_controllers = {}
+        self.top_onvif_controllers = None
+        self.arm_onvif_controllers = None
 
         # one to connect/disconnect TCP client
         self.tcp_checkbox = QCheckBox(text="USB / TCP")
@@ -112,7 +113,7 @@ class CameraControlDock(QDockWidget):
         # Resolution
         layout.addWidget(QLabel("Resolution"))
         self.res_combo = QComboBox()
-        self.res_combo.addItems(["640 x 360", "640 x 480", "1280 x 720"])
+        self.res_combo.addItems(["640 x 360", "640 x 480", "1280 x 720", "352 x 288", "720 x 480",])
         layout.addWidget(self.res_combo)
 
         # Frame Rate
@@ -127,64 +128,7 @@ class CameraControlDock(QDockWidget):
             "250", "500", "1000", #"1500", "2000",
         ])
         self.bitrate_combo.setCurrentText("500")
-        layout.addWidget(self.bitrate_combo)
-
-        # Image
-        layout.addWidget(self._section_heading("Image"))
-
-        # Exposure
-        layout.addWidget(QLabel("Exposure"))
-        self.exposure_value = QLabel("50%")
-        self.exposure_value.setStyleSheet("color: #888888; font-size: 11px;")
-        layout.addWidget(self.exposure_value)
-
-        self.autoExposure_checkbox = QCheckBox(text="Auto Exposure On")
-        layout.addWidget(self.autoExposure_checkbox)
-        self.autoExposure_checkbox.setChecked(True)  # Initialize the checkbox state
-        self.autoExposure_checkbox.stateChanged.connect(self.onStateChanged_autoExposure)
-
-        self.exposureAutoOn = True  # Track the state of auto exposure
-
-        self.maxExposureLabel = QLabel("Max Exposure Time")
-        layout.addWidget(self.maxExposureLabel)
-        self.maxExposureTime_slider = QSlider(Qt.Horizontal)
-        self.maxExposureTime_slider.setRange(0, 100)
-        self.maxExposureTime_slider.setValue(50)
-        layout.addWidget(self.maxExposureTime_slider)
-
-        self.minExposureLabel = QLabel("Min Exposure Time")
-        layout.addWidget(self.minExposureLabel)
-        self.minExposureTime_slider = QSlider(Qt.Horizontal)
-        self.minExposureTime_slider.setRange(0, 100)
-        self.minExposureTime_slider.setValue(50)
-        layout.addWidget(self.minExposureTime_slider)
-
-        self.autoExposure_checkbox.toggled.connect(self.minExposureTime_slider.setVisible)
-        self.autoExposure_checkbox.toggled.connect(self.minExposureLabel.setVisible)
-       
-
-        # Orientation
-        layout.addWidget(self._section_heading("Orientation"))
-        flip_layout = QHBoxLayout()
-        self.flip_h = QPushButton("↔ Flip H")
-        self.flip_h.setCheckable(True)
-        self.flip_h.setStyleSheet("""
-            QPushButton {
-                background-color: #2a2a2a;
-                border: 1px solid #444444;
-                border-radius: 4px;
-                padding: 6px;
-            }
-            QPushButton:checked { background-color: #2196F3; color: white; }
-        """)
-
-        self.flip_v = QPushButton("↕ Flip V")
-        self.flip_v.setCheckable(True)
-        self.flip_v.setStyleSheet(self.flip_h.styleSheet())
-
-        flip_layout.addWidget(self.flip_h)
-        flip_layout.addWidget(self.flip_v)
-        layout.addLayout(flip_layout)
+        layout.addWidget(self.bitrate_combo)        
 
         layout.addSpacing(20)
 
@@ -232,9 +176,7 @@ class CameraControlDock(QDockWidget):
         self.setWidget(scroll)
 
         # Signals
-        self.maxExposureTime_slider.valueChanged.connect(
-            lambda v: self.exposure_value.setText(f"{v}%")
-        )
+        
         self.camera_selector.currentTextChanged.connect(self._update_title)
         self._update_title(self.camera_selector.currentText())
 
@@ -250,37 +192,37 @@ class CameraControlDock(QDockWidget):
             self.tcp_client.disconnect_from_server()
             
     def onStateChanged_arm(self):
+        print(">>onStateChanged_arm called")
         if self.arm_checkbox.isChecked():
             self.arm_checkbox.setText("ARM / ONVIF - Connected")
-            self.onvif_controllers.update({
-                "arm" : ONVIFCameraSettings(
-                    camera_ip = const.CAMERA_INFO["IP Cam 2 / ARM"]["ip"], 
-                    onvif_port = const.IP_ONVIF_PORT, 
-                    username = const.ONVIF_USERNAME, 
-                    password = const.ONVIF_PASSWORD, 
-                    profile_index = const.ONVIF_PROFILE
-                )
-            })
+            self.arm_onvif_controllers = ONVIFCameraSettings(
+                camera_ip = const.CAMERA_INFO["IP Cam 2 / ARM"]["ip"], 
+                onvif_port = const.IP_ONVIF_PORT, 
+                username = const.ONVIF_USERNAME, 
+                password = const.ONVIF_PASSWORD, 
+                profile_index = const.ONVIF_PROFILE
+            )
+            print(f">>Connected to ARM ONVIF camera at {self.arm_onvif_controllers}")
         else:
             self.arm_checkbox.setText("ARM / ONVIF - Disconnected")
-            self.onvif_controllers['arm'] = None
+            self.arm_onvif_controllers = None
 
             
     def onStateChanged_top(self):
+        print(">>onStateChanged_top called")
         if self.top_checkbox.isChecked():
             self.top_checkbox.setText("TOP / ONVIF - Connected")
-            self.onvif_controllers.update({
-                "top" : ONVIFCameraSettings(
-                    camera_ip = const.CAMERA_INFO["IP Cam / Top"]["ip"], 
-                    onvif_port = const.IP_ONVIF_PORT, 
-                    username = const.ONVIF_USERNAME, 
-                    password = const.ONVIF_PASSWORD, 
-                    profile_index = const.ONVIF_PROFILE
-                )
-            })
+            self.top_onvif_controllers = ONVIFCameraSettings(
+                camera_ip = const.CAMERA_INFO["IP Cam / Top"]["ip"], 
+                onvif_port = const.IP_ONVIF_PORT, 
+                username = const.ONVIF_USERNAME, 
+                password = const.ONVIF_PASSWORD, 
+                profile_index = const.ONVIF_PROFILE
+            )
+            print(f">>Connected to TOP ONVIF camera at {self.top_onvif_controllers}")
         else:
             self.top_checkbox.setText("TOP / ONVIF - Disconnected")
-            self.onvif_controllers['top'] = None
+            self.top_onvif_controllers = None
 
     
     def onStateChanged_autoExposure(self):
@@ -332,8 +274,8 @@ class CameraControlDock(QDockWidget):
         height = int(resolution_split[2])
         fps = int(self.fps_combo.currentText())
         bitrate = int(self.bitrate_combo.currentText())
-        max_exposure = self.maxExposureTime_slider.value()
-        min_exposure = self.minExposureTime_slider.value()
+        #max_exposure = self.maxExposureTime_slider.value()
+        #min_exposure = self.minExposureTime_slider.value()
 
         
         # even if command = 'stop' doesn't need the rest, it's fine to have
@@ -362,18 +304,20 @@ class CameraControlDock(QDockWidget):
 
             if (camera_name) == "top":
                 # onvifmethod.ashdajjas()
-                onvif_camera = self.onvif_controllers["top"]
+                #onvif_camera = self.onvif_controllers["top"]
+                self.top_onvif_controllers.change_resolution(width, height)
+                self.top_onvif_controllers.change_fps(fps)
+                self.top_onvif_controllers.change_bitrate(bitrate)
             elif (camera_name) == "arm":
-                onvif_camera = self.onvif_controllers["arm"]
+                self.arm_onvif_controllers.change_resolution(width, height)
+                self.arm_onvif_controllers.change_fps(fps)
+                self.arm_onvif_controllers.change_bitrate(bitrate)
 
-            onvif_camera.change_resolution(width, height)
-            onvif_camera.change_fps(fps)
-            onvif_camera.change_bitrate(bitrate)
             #if self.exposureAutoOn:
             #    onvif_camera.set_auto_exposure(min_exposure, max_exposure)
             #else:
             #    onvif_camera.set_manual_exposure(max_exposure)
-            print(f"Sent ONVIF Packet to {camera_name}: [{command}] {settings['camera']} → {settings}")
+            print(f"Sent ONVIF Packet to {camera_name}: [{command}] → {{'width': {width}, 'height': {height}, 'fps': {fps}, 'bitrate': {bitrate}}}")
 
 
 

@@ -73,7 +73,7 @@ class MainWindow(QMainWindow):
         self.top_dock = self.camera_docks["top"]
         self.arm_dock = self.camera_docks["arm"]
 
-        self.front_dock.setMinimumSize(480, 300)
+        #self.front_dock.setMinimumSize(100, 100)
         self.addDockWidget(Qt.LeftDockWidgetArea, self.front_dock)
         for key in ("back", "top", "arm"):
             self.addDockWidget(Qt.BottomDockWidgetArea, self.camera_docks[key])

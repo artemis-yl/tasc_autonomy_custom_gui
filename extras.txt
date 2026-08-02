@@ -1,0 +1,59 @@
+        """
+        # Exposure
+        layout.addWidget(QLabel("Exposure"))
+        self.exposure_value = QLabel("50%")
+        self.exposure_value.setStyleSheet("color: #888888; font-size: 11px;")
+        layout.addWidget(self.exposure_value)
+
+        self.autoExposure_checkbox = QCheckBox(text="Auto Exposure On")
+        layout.addWidget(self.autoExposure_checkbox)
+        self.autoExposure_checkbox.setChecked(True)  # Initialize the checkbox state
+        self.autoExposure_checkbox.stateChanged.connect(self.onStateChanged_autoExposure)
+
+        self.exposureAutoOn = True  # Track the state of auto exposure
+
+        self.maxExposureLabel = QLabel("Max Exposure Time")
+        layout.addWidget(self.maxExposureLabel)
+        self.maxExposureTime_slider = QSlider(Qt.Horizontal)
+        self.maxExposureTime_slider.setRange(0, 100)
+        self.maxExposureTime_slider.setValue(50)
+        layout.addWidget(self.maxExposureTime_slider)
+
+        self.minExposureLabel = QLabel("Min Exposure Time")
+        layout.addWidget(self.minExposureLabel)
+        self.minExposureTime_slider = QSlider(Qt.Horizontal)
+        self.minExposureTime_slider.setRange(0, 100)
+        self.minExposureTime_slider.setValue(50)
+        layout.addWidget(self.minExposureTime_slider)
+
+        self.autoExposure_checkbox.toggled.connect(self.minExposureTime_slider.setVisible)
+        self.autoExposure_checkbox.toggled.connect(self.minExposureLabel.setVisible)
+       
+       self.maxExposureTime_slider.valueChanged.connect(
+            lambda v: self.exposure_value.setText(f"{v}%")
+        )
+
+
+
+        # Orientation
+        layout.addWidget(self._section_heading("Orientation"))
+        flip_layout = QHBoxLayout()
+        self.flip_h = QPushButton("↔ Flip H")
+        self.flip_h.setCheckable(True)
+        self.flip_h.setStyleSheet("""
+            QPushButton {
+                background-color: #2a2a2a;
+                border: 1px solid #444444;
+                border-radius: 4px;
+                padding: 6px;
+            }
+            QPushButton:checked { background-color: #2196F3; color: white; }
+        """)
+
+        self.flip_v = QPushButton("↕ Flip V")
+        self.flip_v.setCheckable(True)
+        self.flip_v.setStyleSheet(self.flip_h.styleSheet())
+
+        flip_layout.addWidget(self.flip_h)
+        flip_layout.addWidget(self.flip_v)
+        layout.addLayout(flip_layout)

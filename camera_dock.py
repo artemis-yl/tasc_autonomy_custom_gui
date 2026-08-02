@@ -32,7 +32,7 @@ class CameraDock(QDockWidget):
                 letter-spacing: 0.5px;
             }
         """)
-        header.setMaximumHeight(30)
+        header.setMaximumHeight(20)
 
         layout.addWidget(header)
         layout.addWidget(self.video_widget, 1)
